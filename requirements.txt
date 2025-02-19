@@ -1,0 +1,12 @@
+gymnasium==0.29.1
+mani_skill==3.0.0b15
+matplotlib==3.9.2
+numpy==1.23.5
+torch==2.2.1
+wandb==0.18.5
+tensorboard==2.18.0
+colorama==0.4.6
+tqdm
+pandas
+ipywidgets
+
