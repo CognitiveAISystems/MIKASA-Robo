@@ -177,3 +177,17 @@ These training modes are obtained by using correct flags. Thus,
 # Additionally, for debugging you can add oracle information to the observation:
 --include-oracle
 ```
+
+## Citation
+If you find our work useful, please cite our paper:
+```
+@misc{cherepanov2025mikasa,
+      title={Memory, Benchmark & Robots: A Benchmark for Solving Complex Tasks with Reinforcement Learning}, 
+      author={Egor Cherepanov and Nikita Kachaev and Alexey K. Kovalev and Aleksandr I. Panov},
+      year={2025},
+      eprint={2502.10550},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2502.10550}, 
+}
+```
