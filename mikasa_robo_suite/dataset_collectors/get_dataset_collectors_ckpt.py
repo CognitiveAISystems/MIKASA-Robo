@@ -104,16 +104,20 @@ ENVS_CONFIG = {
         "num_eval_steps": 90
     }],
     # TODO: Tested? TBD
-    11: ["RotateStrictPos-v0",          0.95, {
+    11: ["RotateStrictPos-v0",          0.90, {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-v0",
         "num_steps": 90,
-        "num_eval_steps": 90
+        "num_eval_steps": 90,
+        "anneal_lr": True
+
     }],
     # TODO: Tested? TBD
-    12: ["RotateStrictPosNeg-v0",       0.95, {
+    12: ["RotateStrictPosNeg-v0",       0.90, {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-neg-v0",
         "num_steps": 90,
-        "num_eval_steps": 90
+        "num_eval_steps": 90,
+        "anneal_lr": True
+
     }],
     # TODO: Tested? False
     13: ["TakeItBack-v0",               0.95, {
@@ -314,9 +318,8 @@ from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
-from mikasa_robo import *
-from utils.wrappers import *
+import mikasa_robo_suite.memory_envs
+from mikasa_robo_suite.utils.wrappers import *
 
 
 import copy

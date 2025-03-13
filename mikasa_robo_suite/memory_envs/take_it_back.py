@@ -16,7 +16,7 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array, GPUMemoryConfig, SimConfig
 from typing import Optional, Union
 from mani_skill.envs.scene import ManiSkillScene
-from utils import shapes
+from mikasa_robo_suite.utils import shapes
 
 
 @register_env("TakeItBack-v0", max_episode_steps=180)

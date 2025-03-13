@@ -344,7 +344,7 @@ class CameraShutdownWrapper(gym.Wrapper):
 
 
 class InitialZeroActionWrapper(gym.ActionWrapper):
-    def __init__(self, env, n_initial_steps=29):
+    def __init__(self, env, n_initial_steps=1):
         """
         A wrapper that forces zero actions for a specified number of initial steps in the environment.
 

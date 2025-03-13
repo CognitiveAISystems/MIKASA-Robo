@@ -20,7 +20,7 @@ from mani_skill.utils.structs.pose import Pose
 from typing import Optional, Union
 from mani_skill.envs.scene import ManiSkillScene
 
-from utils import shapes
+from mikasa_robo_suite.utils import shapes
 
 
 class RememberShapeAndColorBaseEnv(BaseEnv):

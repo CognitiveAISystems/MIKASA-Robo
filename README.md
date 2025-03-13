@@ -67,16 +67,20 @@ MIKASA-Robo is a comprehensive benchmark suite for memory-intensive robotic mani
 
 ### Installation
 ```bash
+# Local installation
 git clone git@github.com:CognitiveAISystems/MIKASA-Robo.git
 cd MIKASA-Robo
-pip install -r requirements.txt
+pip install -e .
+
+# Remote installation
+pip install mikasa-robo-suite
 ```
 
 
 ## Basic Usage
 ```python
 import mikasa_robo
-from mikasa_robo.utils.wrappers import *
+from mikasa_robo_suite.utils.wrappers import *
 
 num_envs, seed = 512, 123
 # Create the environment via gym.make()
@@ -97,7 +101,7 @@ env.close()
 ## Advanced Usage: Debug Wrappers
 ```python
 import mikasa_robo
-from mikasa_robo.utils.wrappers import *
+from mikasa_robo_suite.utils.wrappers import *
 from mani_skill.utils.wrappers import RecordEpisode
 
 num_envs, seed = 512, 123

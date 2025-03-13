@@ -15,7 +15,8 @@ from mani_skill.utils.wrappers import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from baselines.ppo.ppo_memtasks import AgentStateOnly, FlattenRGBDObservationWrapper
-from utils.wrappers import *
+from mikasa_robo_suite.memory_envs import *
+from mikasa_robo_suite.utils.wrappers import *
 
 
 def env_info(env_id):
