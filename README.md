@@ -32,6 +32,11 @@
     <code>pip install mikasa-robo-suite</code>
 </p>
 
+<p align="center">
+    <b>🔥 DATASETS COMING SOON! 🔥</b><br>
+    <i>Stay tuned for our memory-intensive training datasets!</i>
+</p>
+
 ## Overview
 
 MIKASA-Robo is a comprehensive benchmark suite for memory-intensive robotic manipulation tasks, part of the MIKASA (Memory-Intensive Skills Assessment Suite for Agents) framework. It features:
