@@ -8,7 +8,7 @@ def read_requirements(filename):
 
 setup(
     name="mikasa_robo_suite",
-    version="0.0.2",
+    version="0.0.3",
     packages=find_packages(),
     install_requires=read_requirements('requirements.txt'), 
     author="Egor Cherepanov",
