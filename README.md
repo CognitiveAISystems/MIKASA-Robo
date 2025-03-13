@@ -9,6 +9,12 @@
     <a href="https://sites.google.com/view/memorybenchrobots/">
         <img src="https://img.shields.io/badge/Website-Project_Page-blue.svg"/>
     </a>
+    <a href="https://pypi.org/project/mikasa-robo-suite/">
+        <img src="https://img.shields.io/pypi/v/mikasa-robo-suite.svg"/>
+    </a>
+    <a href="https://github.com/CognitiveAISystems/MIKASA-Robo">
+        <img src="https://img.shields.io/badge/GitHub-MIKASA--Robo-green.svg"/>
+    </a>
 </div>
 
 ---
@@ -20,6 +26,11 @@
     <img src="assets/remember-shape-and-color-5x3.gif" width="200" />
 </div>
 <p align="center"><i>Example tasks from the MIKASA-Robo benchmark</i></p>
+
+<p align="center">
+    <b>🎉 NOW AVAILABLE ON PIP! 🎉</b><br>
+    <code>pip install mikasa-robo-suite</code>
+</p>
 
 ## Overview
 
@@ -79,51 +90,92 @@ pip install mikasa-robo-suite
 
 ## Basic Usage
 ```python
-import mikasa_robo
-from mikasa_robo_suite.utils.wrappers import *
+import mikasa_robo_suite
+from mikasa_robo_suite.utils.wrappers import StateOnlyTensorToDictWrapper
+from tqdm.notebook import tqdm
+import torch
+import gymnasium as gym
 
-num_envs, seed = 512, 123
 # Create the environment via gym.make()
 # obs_mode="rgb" for modes "RGB", "RGB+joint", "RGB+oracle" etc.
 # obs_mode="state" for mode "state"
-env = gym.make("RememberColor9-v0", num_envs=num_envs,
-                obs_mode="rgb", render_mode="all")
+episode_timeout = 90
+env = gym.make("RememberColor9-v0", num_envs=4, obs_mode="rgb", render_mode="all")
+env = StateOnlyTensorToDictWrapper(env) # * always use this wrapper!
 
-env = StateOnlyTensorToDictWrapper(env) # [always] gen. obs keys
+obs, _ = env.reset(seed=42)
+print(obs.keys())
+for i in tqdm(range(episode_timeout)):
+    action = env.action_space.sample()
+    obs, reward, terminated, truncated, info = env.step(torch.from_numpy(action))
 
-obs, _ = env.reset(seed)
-for i in tqdm(range(89)):
-    action = torch.from_numpy(env.action_space.sample())
-    obs, reward, terminated, truncated, info = env.step(action)
 env.close()
 ```
 
 ## Advanced Usage: Debug Wrappers
+MIKASA-Robo has implemented special task-specific and task-agnostic wrappers that allow you to track the progress of agents training, the reward agents receive, the number of steps agents have taken, and the individual contribution from each reward component. It is not necessary to use these wrappers, but if you do decide not to use them, remember that `env = StateOnlyTensorToDictWrapper(env)` **must always be used** to get the correct observation keys! For mode details see [quick_start.ipynb](https://github.com/CognitiveAISystems/MIKASA-Robo/blob/main/quick_start.ipynb).
+
+### With all task-predefined wrappers
 ```python
-import mikasa_robo
-from mikasa_robo_suite.utils.wrappers import *
-from mani_skill.utils.wrappers import RecordEpisode
+import mikasa_robo_suite
+from mikasa_robo_suite.dataset_collectors.get_mikasa_robo_datasets import env_info
+from tqdm.notebook import tqdm
+import torch
+import gymnasium as gym
 
-num_envs, seed = 512, 123
-env = gym.make("RememberColor9-v0", num_envs=num_envs,
-obs_mode="rgb", render_mode="all")
+env_name = "RememberColor9-v0"
+obs_mode = "rgb" # or "state"
+num_envs = 4
+seed = 42
 
-env = StateOnlyTensorToDictWrapper(env) # [always] gen. obs keys
-env = RememberColorInfoWrapper(env) # [debug] show task info
-env = RenderStepInfoWrapper(env) # [debug] show env step
-env = RenderRewardInfoWrapper(env) # [debug] show total reward
-env = DebugRewardWrapper(env) # [debug] show reward info
-env = RecordEpisode(env, "./videos/demo_remember-color-9")
+env = gym.make(env_name, num_envs=num_envs, obs_mode=obs_mode, render_mode="all")
 
-obs, _ = env.reset(seed)
-for i in tqdm(range(89)):
-    action = torch.from_numpy(env.action_space.sample())
-    obs, reward, terminated, truncated, info = env.step(action)
+state_wrappers_list, episode_timeout = env_info(env_name)
+print(f"Episode timeout: {episode_timeout}")
+for wrapper_class, wrapper_kwargs in state_wrappers_list:
+    env = wrapper_class(env, **wrapper_kwargs)
+
+obs, _ = env.reset(seed=seed)
+print(obs.keys())
+for i in tqdm(range(episode_timeout)):
+    action = env.action_space.sample()
+    obs, reward, terminated, truncated, info = env.step(torch.from_numpy(action))
+
 env.close()
-
-Video("./videos/demo_remember-color-9/0.mp4", embed=True)
 ```
+### With selective wrappers
+```python
+import mikasa_robo_suite
+from mikasa_robo_suite.utils.wrappers import *
+from mikasa_robo_suite.memory_envs import *
+import gymnasium as gym
+from gymnasium.envs.registration import registry
+from tqdm.notebook import tqdm
 
+env_name = "ShellGameTouch-v0"
+obs_mode = "state"
+num_envs = 4
+seed = 42
+
+env = gym.make(env_name, num_envs=num_envs, obs_mode=obs_mode, render_mode="all")
+max_steps = registry.get(env_name).max_episode_steps
+print(f"Episode timeout: {max_steps}")
+
+env = StateOnlyTensorToDictWrapper(env)
+env = InitialZeroActionWrapper(env, n_initial_steps=1)
+env = ShellGameRenderCupInfoWrapper(env)
+env = RenderStepInfoWrapper(env)
+env = RenderRewardInfoWrapper(env)
+env = DebugRewardWrapper(env)
+
+obs, _ = env.reset(seed=seed)
+print(obs.keys())
+for i in tqdm(range(max_steps)):
+    action = env.action_space.sample()
+    obs, reward, terminated, truncated, info = env.step(torch.from_numpy(action))
+
+env.close()
+```
 
 ## Training
 MIKASA-Robo supports multiple training configurations:
@@ -186,19 +238,19 @@ These training modes are obtained by using correct flags. Thus,
 1. Run training PPO-MLP on MIKASA-Robo tasks in the `state` mode (i.e. in MDP mode with oracle information):
 ```bash
 # For single task:
-python3 dataset_collectors/get_dataset_collectors_ckpt.py --env_id=ShellGameTouch-v0
+python3 mikasa_robo_suite/dataset_collectors/get_dataset_collectors_ckpt.py --env_id=ShellGameTouch-v0
 
 # For all tasks:
-python3dataset_collectors/parallel_training_manager.py
+python3 mikasa_robo_suite/dataset_collectors/parallel_training_manager.py
 ```
 
 2. Collect datasets using oracle checkpoints:
 ```bash
 # For single task:
-python3 dataset_collectors/get_mikasa_robo_datasets.py --env-id=ShellGameTouch-v0 --path-to-save-data="data" --ckpt-dir="."
+python3 mikasa_robo_suite/dataset_collectors/get_mikasa_robo_datasets.py --env-id=ShellGameTouch-v0 --path-to-save-data="data" --ckpt-dir="."
 
 # For all tasks:
-python3 dataset_collectors/parallel_dataset_collection_manager.py --path-to-save-data="data" --ckpt-dir="."
+python3 mikasa_robo_suite/dataset_collectors/parallel_dataset_collection_manager.py --path-to-save-data="data" --ckpt-dir="."
 ```
 
 ## Citation
