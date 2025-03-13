@@ -108,7 +108,6 @@ ENVS_CONFIG = {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-v0",
         "num_steps": 90,
         "num_eval_steps": 90,
-        "anneal_lr": True
 
     }],
     # TODO: Tested? TBD
@@ -116,7 +115,6 @@ ENVS_CONFIG = {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-neg-v0",
         "num_steps": 90,
         "num_eval_steps": 90,
-        "anneal_lr": True
 
     }],
     # TODO: Tested? False
