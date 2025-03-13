@@ -178,6 +178,25 @@ These training modes are obtained by using correct flags. Thus,
 --include-oracle
 ```
 
+## Collecting datasets for Offline RL
+1. Run training PPO-MLP on MIKASA-Robo tasks in the `state` mode (i.e. in MDP mode with oracle information):
+```bash
+# For single task:
+python3 dataset_collectors/get_dataset_collectors_ckpt.py --env_id=ShellGameTouch-v0
+
+# For all tasks:
+python3dataset_collectors/parallel_training_manager.py
+```
+
+2. Collect datasets using oracle checkpoints:
+```bash
+# For single task:
+python3 dataset_collectors/get_mikasa_robo_datasets.py --env-id=ShellGameTouch-v0 --path-to-save-data="data" --ckpt-dir="."
+
+# For all tasks:
+python3 dataset_collectors/parallel_dataset_collection_manager.py --path-to-save-data="data" --ckpt-dir="."
+```
+
 ## Citation
 If you find our work useful, please cite our paper:
 ```

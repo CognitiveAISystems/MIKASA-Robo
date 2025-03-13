@@ -613,7 +613,8 @@ class RememberShapeAndColorInfoWrapper(gym.Wrapper):
         #     self._env = self._env.env
             
         self.shape_dict = self._env.base_shapes
-        self.color_dict = self._env.color_dict
+        print(self.shape_dict)
+        # self.color_dict = self._env.color_dict
         
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
@@ -680,13 +681,15 @@ class RememberShapeAndColorInfoWrapper(gym.Wrapper):
                 2
             )
             # Draw color name in its corresponding color
+            # Use self.shape_color_dict to get the color
+            color = self._env.shape_color_dict[color_id]['color'][:3] * 255  # convert to BGR
             cv2.putText(
                 frame[i],
                 f"{color_name} ",
                 (10 + text_width, 60),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1.0,
-                self.color_dict[color_id][:3] * 255,  # convert to BGR
+                color,  # use the color from shape_color_dict
                 2,
                 cv2.LINE_AA
             )

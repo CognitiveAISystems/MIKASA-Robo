@@ -54,5 +54,6 @@ wandb/
 wandb_config.yaml
 !assets/
 !assets/**
-
+oracle_checkpoints/*
+data/*
 .nfs*
