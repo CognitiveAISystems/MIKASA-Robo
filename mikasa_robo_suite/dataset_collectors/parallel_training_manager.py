@@ -78,7 +78,7 @@ class TrainingManager:
                 env_id = remaining_envs.pop(0)
                 cmd = [
                     "python3",
-                    "mikasa_robo/dataset_collectors/get_dataset_collectors_ckpt.py",
+                    "mikasa_robo_suite/dataset_collectors/get_dataset_collectors_ckpt.py",
                     f"--env_id={env_id}"
                 ]
                 
