@@ -57,3 +57,4 @@ wandb_config.yaml
 oracle_checkpoints/*
 data/*
 .nfs*
+*.zip

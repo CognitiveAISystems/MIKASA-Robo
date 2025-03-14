@@ -104,14 +104,14 @@ ENVS_CONFIG = {
         "num_eval_steps": 90
     }],
     # TODO: Tested? TBD
-    11: ["RotateStrictPos-v0",          0.90, {
+    11: ["RotateStrictPos-v0",          0.50, {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-v0",
         "num_steps": 90,
         "num_eval_steps": 90,
 
     }],
     # TODO: Tested? TBD
-    12: ["RotateStrictPosNeg-v0",       0.90, {
+    12: ["RotateStrictPosNeg-v0",       0.75, {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-neg-v0",
         "num_steps": 90,
         "num_eval_steps": 90,
