@@ -156,7 +156,7 @@ def collect_batched_data_from_ckpt(env_id="ShellGameTouch-v0", checkpoint_path=N
     # env_id = "ShellGameTouch-v0"
     # episode_timeout = 90
     # checkpoint_path = "checkpoints/ppo_memtasks/state/normalized_dense/ShellGameTouch-v0/ppo-mlp-state-dense-shell-game-touch-v0__123__state__20250311_094700/20250311_094700/final_success_ckpt.pt"
-    NUMBER_OF_TRAIN_DATA = 5000 # 5
+    NUMBER_OF_TRAIN_DATA = 1000
     batch_size = 250
     NUMBER_OF_BATCHES = NUMBER_OF_TRAIN_DATA // batch_size
     # render = True

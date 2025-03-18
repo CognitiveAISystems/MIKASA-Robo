@@ -207,32 +207,40 @@ class RotateStrictEnv(BaseEnv):
         # * Reward for reaching the peg
         to_grip_vec = self.peg.pose.p - self.agent.tcp.pose.p
         to_grip_dist = torch.linalg.norm(to_grip_vec, axis=1)
-        reaching_reward = torch.exp(-5.0 * to_grip_dist)
-
-        # * Reward for Y axis rotation
-        y_angle_diff = info["y_angle_error"]
-        y_angle_reward = torch.exp(-1.5 * torch.abs(y_angle_diff))
-
-        # * Reward for stability
-        agent_is_static = self.agent.is_static(0.2)
+        reaching_reward = torch.exp(-3.0 * to_grip_dist)
 
         # * Update reached status
-        reach_threshold = 0.1
+        reach_threshold = 0.04
         reached_status = to_grip_dist < reach_threshold
 
-        reward = reaching_reward
-        reward[reached_status] += 15.0 * y_angle_reward[reached_status]
-        reward[self.correct_angle] += 5.0
-        reward[self.correct_angle & agent_is_static] += 2.0
+        # Base reward - только награда за приближение к peg
+        reward = 0.5 * reaching_reward
 
-        # * Rewards for X and Z axis rotations
+        # Position control rewards
         x_pos_reward = torch.exp(-5.0 * torch.abs(info["x_pos_error"]))
         y_pos_reward = torch.exp(-5.0 * torch.abs(info["y_pos_error"]))
+        
+        # Y axis rotation reward
+        y_angle_diff = info["y_angle_error"]
+        y_angle_reward = torch.exp(-1.0 * torch.abs(y_angle_diff))
 
-        reward += x_pos_reward
-        reward += y_pos_reward
+        # Stability check
+        agent_is_static = self.agent.is_static(0.2)
 
-        reward[info["success"]] = 30.0
+        # Add position control rewards only after reaching
+        reward = torch.where(reached_status, reward + 5.0 * x_pos_reward, reward)
+        reward = torch.where(reached_status, reward + 5.0 * y_pos_reward, reward)
+
+        # Add rotation reward when position is good
+        position_ok = (torch.abs(info["x_pos_error"]) < 0.05) & (torch.abs(info["y_pos_error"]) < 0.05)
+        rotation_mask = reached_status & position_ok
+        reward = torch.where(rotation_mask, reward + 35.0 * y_angle_reward, reward)
+        
+        reward = torch.where(self.correct_angle & position_ok & reached_status, reward + 10.0, reward)
+        reward = torch.where(self.correct_angle & agent_is_static & position_ok & reached_status, reward + 5.0, reward)
+
+        # Success reward only when everything is correct
+        reward = torch.where(info["success"], 100.0, reward)
 
         self.reward_dict = {
             "to_grip_dist": to_grip_dist,
@@ -247,13 +255,14 @@ class RotateStrictEnv(BaseEnv):
             "x_pos_error": info["x_pos_error"],
             "y_pos_error": info["y_pos_error"],
             "x_pos_reward": x_pos_reward,
-            "y_pos_reward": y_pos_reward
+            "y_pos_reward": y_pos_reward,
+            "position_ok": position_ok
         }
         
         return reward
 
     def compute_normalized_dense_reward(self, obs: Any, action: Array, info: Dict):
-        max_reward = 30.0
+        max_reward = 100.0
         return self.compute_dense_reward(obs=obs, action=action, info=info) / max_reward
     
 @register_env("RotateStrictPos-v0", max_episode_steps=90)

@@ -37,93 +37,76 @@
 
 ENVS_CONFIG = {
 # * id: [env_id, success_once_threshold, parameters]
-    # TODO: Tested? -> SR=1.00 Epoch 75
     0: ["ShellGameTouch-v0",            0.95, {
         "exp_name": "ppo-mlp-state-dense-shell-game-touch-v0",
         "num_steps": 90,
         "num_eval_steps": 90,
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 50
     1: ["ShellGamePush-v0",             0.95, {
         "exp_name": "ppo-mlp-state-dense-shell-game-push-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 325
     2: ["ShellGamePick-v0",             0.95, {
         "exp_name": "ppo-mlp-state-dense-shell-game-pick-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 275
     3: ["InterceptSlow-v0",             0.95, {
         "exp_name": "ppo-mlp-state-dense-intercept-slow-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 175
     4: ["InterceptMedium-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-intercept-medium-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 425
     5: ["InterceptFast-v0",             0.95, {
         "exp_name": "ppo-mlp-state-dense-intercept-fast-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 100
     6: ["InterceptGrabSlow-v0",         0.95, {
         "exp_name": "ppo-mlp-state-dense-intercept-grab-slow-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 75
     7: ["InterceptGrabMedium-v0",       0.95, {
         "exp_name": "ppo-mlp-state-dense-intercept-grab-medium-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 150
     8: ["InterceptGrabFast-v0",         0.95, {
         "exp_name": "ppo-mlp-state-dense-intercept-grab-fast-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 150
     9: ["RotateLenientPos-v0",          0.95, {
         "exp_name": "ppo-mlp-state-dense-rotate-lenient-pos-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? -> SR=1.00 Epoch 150
     10: ["RotateLenientPosNeg-v0",      0.95, {
         "exp_name": "ppo-mlp-state-dense-rotate-lenient-pos-neg-v0",
         "num_steps": 90,
         "num_eval_steps": 90
     }],
-    # TODO: Tested? TBD
-    11: ["RotateStrictPos-v0",          0.50, {
+    11: ["RotateStrictPos-v0",          0.95, {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-v0",
         "num_steps": 90,
-        "num_eval_steps": 90,
-
+        "num_eval_steps": 90
     }],
-    # TODO: Tested? TBD
-    12: ["RotateStrictPosNeg-v0",       0.75, {
+    12: ["RotateStrictPosNeg-v0",       0.95, {
         "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-neg-v0",
         "num_steps": 90,
-        "num_eval_steps": 90,
-
+        "num_eval_steps": 90
     }],
-    # TODO: Tested? False
     13: ["TakeItBack-v0",               0.95, {
         "exp_name": "ppo-mlp-state-dense-take-it-back-v0",
         "num_steps": 180,
         "num_eval_steps": 180
     }],
-    # TODO: Tested? SR=1.00 Epoch 25
     14: ["RememberColor3-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-color-3-v0",
         "num_steps": 60,
@@ -131,7 +114,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? TBD
     15: ["RememberColor5-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-color-5-v0",
         "num_steps": 60,
@@ -139,7 +121,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? False
     16: ["RememberColor9-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-color-9-v0",
         "num_steps": 60,
@@ -147,7 +128,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? SR=1.00 Epoch 25
     17: ["RememberShape3-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-shape-3-v0",
         "num_steps": 60,
@@ -155,7 +135,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? False
     18: ["RememberShape5-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-shape-5-v0",
         "num_steps": 60,
@@ -163,7 +142,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? False
     19: ["RememberShape9-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-shape-9-v0",
         "num_steps": 60,
@@ -171,7 +149,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? False
     20: ["RememberShapeAndColor3x2-v0", 0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-3x2-v0",
         "num_steps": 60,
@@ -179,7 +156,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? False
     21: ["RememberShapeAndColor3x3-v0", 0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-3x3-v0",
         "num_steps": 60,
@@ -187,7 +163,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? False
     22: ["RememberShapeAndColor5x3-v0", 0.95, {
         "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-5x3-v0",
         "num_steps": 60,
@@ -195,7 +170,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.9,
         "gamma": 0.8
     }],
-    # TODO: Tested? False
     23: ["BunchOfColors3-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-bunch-of-colors-3-v0",
         "num_steps": 120,
@@ -203,7 +177,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     24: ["BunchOfColors5-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-bunch-of-colors-5-v0",
         "num_steps": 120,
@@ -211,7 +184,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     25: ["BunchOfColors7-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-bunch-of-colors-7-v0",
         "num_steps": 120,
@@ -219,7 +191,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     26: ["SeqOfColors3-v0",             0.95, {
         "exp_name": "ppo-mlp-state-dense-seq-of-colors-3-v0",
         "num_steps": 120,
@@ -227,7 +198,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     27: ["SeqOfColors5-v0",             0.95, {
         "exp_name": "ppo-mlp-state-dense-seq-of-colors-5-v0",
         "num_steps": 120,
@@ -235,7 +205,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     28: ["SeqOfColors7-v0",             0.95, {
         "exp_name": "ppo-mlp-state-dense-seq-of-colors-7-v0",
         "num_steps": 120,
@@ -243,7 +212,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     29: ["ChainOfColors3-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-chain-of-colors-3-v0",
         "num_steps": 120,
@@ -251,7 +219,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     30: ["ChainOfColors5-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-chain-of-colors-5-v0",
         "num_steps": 120,
@@ -259,7 +226,6 @@ ENVS_CONFIG = {
         "gae_lambda": 0.95,
         "gamma": 0.9
     }],
-    # TODO: Tested? False
     31: ["ChainOfColors7-v0",           0.95, {
         "exp_name": "ppo-mlp-state-dense-chain-of-colors-7-v0",
         "num_steps": 120,
@@ -334,37 +300,6 @@ warnings.filterwarnings('ignore', message='.*env\\.\\w+ to get variables from ot
 from pprint import pprint
 from dataclasses import dataclass, field, asdict
 # pprint(self.config, indent=2, width=80)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class FlattenRGBDObservationWrapper(gym.ObservationWrapper):

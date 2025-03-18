@@ -58,3 +58,6 @@ oracle_checkpoints/*
 data/*
 .nfs*
 *.zip
+secret.txt
+download_assets.sh
+keep_going.sh
