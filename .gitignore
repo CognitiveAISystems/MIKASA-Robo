@@ -61,3 +61,4 @@ data/*
 secret.txt
 download_assets.sh
 keep_going.sh
+upload.ipynb

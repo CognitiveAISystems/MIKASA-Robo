@@ -15,6 +15,9 @@
     <a href="https://github.com/CognitiveAISystems/MIKASA-Robo">
         <img src="https://img.shields.io/badge/GitHub-MIKASA--Robo-green.svg"/>
     </a>
+    <a href="https://huggingface.co/datasets/avanturist/mikasa-robo">
+        <img src="https://img.shields.io/badge/🤗_Hugging_Face-Datasets-yellow.svg"/>
+    </a>
 </div>
 
 ---
@@ -33,9 +36,25 @@
 </p>
 
 <p align="center">
-    <b>🔥 DATASETS COMING SOON! 🔥</b><br>
-    <i>Stay tuned for our memory-intensive training datasets!</i>
+    <b>🎯 DATASETS NOW AVAILABLE! 🎯</b><br>
+    <i>Check out our <a href="#datasets-for-offline-rl">memory-intensive training datasets</a> for Offline RL!</i>
 </p>
+
+
+## Table of Contents
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [List of Tasks](#list-of-tasks)
+- [Quick Start](#quick-start)
+  - [Installation](#installation)
+  - [Basic Usage](#basic-usage)
+  - [Advanced Usage: Debug Wrappers](#advanced-usage-debug-wrappers)
+- [Training](#training)
+- [MIKASA-Robo Ideology](#mikasa-robo-ideology)
+- [Datasets for Offline RL](#datasets-for-offline-rl)
+  - [Download ready-made datasets](#download-ready-made-datasets)
+  - [Collect datasets using oracle agents checkpoints](#collect-datasets-using-oracle-agents-checkpoints)
+- [Citation](#citation)
 
 ## Overview
 
@@ -239,8 +258,40 @@ These training modes are obtained by using correct flags. Thus,
 --include-oracle
 ```
 
-## Collecting datasets for Offline RL
-1. Run training PPO-MLP on MIKASA-Robo tasks in the `state` mode (i.e. in MDP mode with oracle information):
+## Datasets for Offline RL
+For Offline RL we have prepared several ready-made datasets available for use immediately after download, as well as checkpoints of trained oracle agents to collect datasets of any size for all MIKASA-Robo tasks using single script.
+
+### Download ready-made datasets
+To allow you to quickly start offline training, we provide several datasets for `ShellGameTouch-v0` (6.72G), `RememberColor3-v0` (4.26G), and `SeqOfColors3-v0` (8.43G), consisting of 1000 episodes each and available on hugging face:
+
+1. [Download `ShellGameTouch-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/ShellGameTouch-v0.zip)
+2. [Download `RememberColor3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberColor3-v0.zip)
+3. [Download `SeqOfColors3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/SeqOfColors3-v0.zip)
+
+Example of the dataset structure for `ShellGameTouch-v0` with episode timeout T = 90:
+```python
+import numpy as mp
+episode = np.load(f'ShellGameTouch-v0/train_data_781.npz')
+
+print(episode['rgb'].shape) # (90, 128, 128, 6) - two RGB images (view from above and from the gripper)
+print(episode['joints'].shape) # (90, 25) - joint positions and velocities, and Tool Center Point (TCP) position and rotation
+print(episode['action'].shape) # (90, 8) - action (8-dimensional vector)
+print(episode['reward'].shape) # (90, ) - (dense) reward for each step
+print(episode['success'].shape) # (90,) - (sparse) success flag for each step
+print(episode['done'].shape) # (90, ) - done flag for each step
+```
+
+### Collect datasets using oracle agents checkpoints
+Download checkpoints (160Mb) of pretrained oracle agents for further datasets collection:
+```bash
+cd MIKASA-Robo
+
+wget https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/oracle_checkpoints.zip
+
+unzip oracle_checkpoints.zip
+```
+
+Or, if you want to train oracle agents from scratch, use this code:
 ```bash
 # For single task:
 python3 mikasa_robo_suite/dataset_collectors/get_dataset_collectors_ckpt.py --env_id=ShellGameTouch-v0
@@ -249,13 +300,20 @@ python3 mikasa_robo_suite/dataset_collectors/get_dataset_collectors_ckpt.py --en
 python3 mikasa_robo_suite/dataset_collectors/parallel_training_manager.py
 ```
 
-2. Collect datasets using oracle checkpoints:
+Once you download / trained oracle agents checkpoints, you can build datasets of arbitrary size (multiples of 250 episodes) for any MIKASA-Robo task:
 ```bash
 # For single task:
-python3 mikasa_robo_suite/dataset_collectors/get_mikasa_robo_datasets.py --env-id=ShellGameTouch-v0 --path-to-save-data="data" --ckpt-dir="."
+python3 mikasa_robo_suite/dataset_collectors/get_mikasa_robo_datasets.py \
+    --env-id=ShellGameTouch-v0 \
+    --path-to-save-data="data" \
+    --ckpt-dir="." \
+    --num-train-data=1000
 
 # For all tasks:
-python3 mikasa_robo_suite/dataset_collectors/parallel_dataset_collection_manager.py --path-to-save-data="data" --ckpt-dir="."
+python3 mikasa_robo_suite/dataset_collectors/parallel_dataset_collection_manager.py \
+    --path-to-save-data="data" \
+    --ckpt-dir="." \
+    --num-train-data=1000
 ```
 
 ## Citation

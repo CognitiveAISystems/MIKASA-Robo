@@ -149,14 +149,18 @@ def env_info(env_id):
     return wrappers_list, EPISODE_TIMEOUT
 
 
-def collect_batched_data_from_ckpt(env_id="ShellGameTouch-v0", checkpoint_path=None, path_to_save_data="data"):    
+def collect_batched_data_from_ckpt(
+    env_id="ShellGameTouch-v0", 
+    checkpoint_path=None, 
+    path_to_save_data="data",
+    num_train_data=1000
+):    
     """
     Collect batched data, consequent unbatching required!!!
     """
     # env_id = "ShellGameTouch-v0"
-    # episode_timeout = 90
-    # checkpoint_path = "checkpoints/ppo_memtasks/state/normalized_dense/ShellGameTouch-v0/ppo-mlp-state-dense-shell-game-touch-v0__123__state__20250311_094700/20250311_094700/final_success_ckpt.pt"
-    NUMBER_OF_TRAIN_DATA = 1000
+    
+    NUMBER_OF_TRAIN_DATA = num_train_data
     batch_size = 250
     NUMBER_OF_BATCHES = NUMBER_OF_TRAIN_DATA // batch_size
     # render = True
@@ -357,12 +361,18 @@ class Args:
     env_id: Optional[str] = "ShellGameTouch-v0"
     path_to_save_data: str = "data"
     ckpt_dir: str = "."
+    num_train_data: int = 1000
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
     path_to_save_data = args.path_to_save_data
     ckpt_dir = args.ckpt_dir
     ENV_ID = args.env_id
+
+    # Check if num_train_data is divisible by batch_size
+    batch_size = 250
+    if args.num_train_data % batch_size != 0:
+        raise ValueError(f"num_train_data ({args.num_train_data}) must be divisible by batch_size ({batch_size})")
 
     # * 0. Get list of all checkpoints available
     checkpoints = get_list_of_all_checkpoints_available(ckpt_dir=ckpt_dir)
@@ -378,7 +388,8 @@ if __name__ == "__main__":
             collect_batched_data_from_ckpt(
                 env_id=env_id, 
                 checkpoint_path=checkpoint, 
-                path_to_save_data=path_to_save_data
+                path_to_save_data=path_to_save_data,
+                num_train_data=args.num_train_data
             )
 
             # * 2. Unbatch batched data
@@ -392,4 +403,4 @@ if __name__ == "__main__":
             shutil.rmtree(dir_with_batched_data)
             print(f"Deleted batched data for {env_id} at {dir_with_batched_data}")
 
-# python3 dataset_collectors/get_mikasa_robo_datasets.py --env-id=ShellGameTouch-v0 --path-to-save-data="data" --ckpt-dir="."
+# python3 mikasa_robo_suite/dataset_collectors/get_mikasa_robo_datasets.py --env-id=ShellGameTouch-v0 --path-to-save-data="data" --ckpt-dir="." --num-train-data=1000

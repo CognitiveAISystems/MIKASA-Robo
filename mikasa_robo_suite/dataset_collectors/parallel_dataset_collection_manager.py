@@ -60,7 +60,7 @@ class TrainingManager:
                 return True
         return False
 
-    def run_training(self, env_ids: List[str], path_to_save_data: str, ckpt_dir: str):
+    def run_training(self, env_ids: List[str], path_to_save_data: str, ckpt_dir: str, num_train_data: int):
         """Run training for multiple environments in parallel"""
         remaining_envs = env_ids.copy()
         
@@ -84,7 +84,8 @@ class TrainingManager:
                     "mikasa_robo_suite/dataset_collectors/get_mikasa_robo_datasets.py",
                     f"--env_id={env_id}",
                     f"--path-to-save-data={path_to_save_data}",
-                    f"--ckpt-dir={ckpt_dir}"
+                    f"--ckpt-dir={ckpt_dir}",
+                    f"--num-train-data={num_train_data}"
                 ]
             
                 process = subprocess.Popen(cmd)
@@ -97,11 +98,13 @@ class TrainingManager:
 class Args:
     path_to_save_data: str = "data"
     ckpt_dir: str = "."
+    num_train_data: int = 1000
 
 def main():
     args = tyro.cli(Args)
     path_to_save_data = args.path_to_save_data
     ckpt_dir = args.ckpt_dir
+    num_train_data = args.num_train_data
 
     # List of environments to train
 
@@ -148,9 +151,9 @@ def main():
     )
 
     # Start parallel training
-    manager.run_training(env_ids, path_to_save_data, ckpt_dir)
+    manager.run_training(env_ids, path_to_save_data, ckpt_dir, num_train_data)
 
 if __name__ == "__main__":
     main()
 
-# python3 dataset_collectors/parallel_dataset_collection_manager.py --path-to-save-data="data" --ckpt-dir="."
+# python3 mikasa_robo_suite/dataset_collectors/parallel_dataset_collection_manager.py --path-to-save-data="data" --ckpt-dir="." --num-train-data=1000
