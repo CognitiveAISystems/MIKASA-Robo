@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-    <b>🎯 DATASETS NOW AVAILABLE! 🎯</b><br>
+    <b>🎯 ALL 32 DATASETS NOW AVAILABLE AT [HUGGINFACE](https://huggingface.co/datasets/avanturist/mikasa-robo/tree/main)! 🎯</b><br>
     <i>Check out our <a href="#datasets-for-offline-rl">memory-intensive training datasets</a> for Offline RL!</i>
 </p>
 
@@ -62,6 +62,7 @@ MIKASA-Robo is a comprehensive benchmark suite for memory-intensive robotic mani
 
 - 12 distinct task types with varying difficulty levels
 - 32 total tasks covering different memory aspects
+- 32 visual-based datasets for Offline RL
 - First benchmark specifically designed for testing agent memory in robotic manipulation
 
 ## Key Features
@@ -262,11 +263,40 @@ These training modes are obtained by using correct flags. Thus,
 For Offline RL we have prepared several ready-made datasets available for use immediately after download, as well as checkpoints of trained oracle agents to collect datasets of any size for all MIKASA-Robo tasks using single script.
 
 ### Download ready-made datasets
-To allow you to quickly start offline training, we provide several datasets for `ShellGameTouch-v0` (6.72G), `RememberColor3-v0` (4.26G), and `SeqOfColors3-v0` (8.43G), consisting of 1000 episodes each and available on hugging face:
+To allow you to quickly start offline training, we provide datasets for all 32 MIKASA-Robo tasks, consisting of 1000 episodes each and available on [Hugging Face](https://huggingface.co/datasets/avanturist/mikasa-robo/tree/main) (~200G in total):
 
 1. [Download `ShellGameTouch-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/ShellGameTouch-v0.zip)
-2. [Download `RememberColor3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberColor3-v0.zip)
-3. [Download `SeqOfColors3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/SeqOfColors3-v0.zip)
+2. [Download `ShellGamePush-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/ShellGamePush-v0.zip)
+3. [Download `ShellGamePick-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/ShellGamePick-v0.zip)
+4. [Download `InterceptSlow-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/InterceptSlow-v0.zip)
+5. [Download `InterceptMedium-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/InterceptMedium-v0.zip)
+6. [Download `InterceptFast-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/InterceptFast-v0.zip)
+7. [Download `InterceptGrabSlow-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/InterceptGrabSlow-v0.zip)
+8. [Download `InterceptGrabMedium-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/InterceptGrabMedium-v0.zip)
+9. [Download `InterceptGrabFast-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/InterceptGrabFast-v0.zip)
+10. [Download `RotateLenientPos-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RotateLenientPos-v0.zip)
+11. [Download `RotateLenientPosNeg-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RotateLenientPosNeg-v0.zip)
+12. [Download `RotateStrictPos-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RotateStrictPos-v0.zip)
+13. [Download `RotateStrictPosNeg-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RotateStrictPosNeg-v0.zip)
+14. [Download `TakeItBack-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/TakeItBack-v0.zip)
+15. [Download `RememberColor3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberColor3-v0.zip)
+16. [Download `RememberColor5-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberColor5-v0.zip)
+17. [Download `RememberColor9-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberColor9-v0.zip)
+18. [Download `RememberShape3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberShape3-v0.zip)
+19. [Download `RememberShape5-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberShape5-v0.zip)
+20. [Download `RememberShape9-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberShape9-v0.zip)
+21. [Download `RememberShapeAndColor3x2-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberShapeAndColor3x2-v0.zip)
+22. [Download `RememberShapeAndColor3x3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberShapeAndColor3x3-v0.zip)
+23. [Download `RememberShapeAndColor5x3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/RememberShapeAndColor5x3-v0.zip)
+24. [Download `BunchOfColors3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/BunchOfColors3-v0.zip)
+25. [Download `BunchOfColors5-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/BunchOfColors5-v0.zip)
+26. [Download `BunchOfColors7-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/BunchOfColors7-v0.zip)
+27. [Download `SeqOfColors3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/SeqOfColors3-v0.zip)
+28. [Download `SeqOfColors5-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/SeqOfColors5-v0.zip)
+29. [Download `SeqOfColors7-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/SeqOfColors7-v0.zip)
+30. [Download `ChainOfColors3-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/ChainOfColors3-v0.zip)
+31. [Download `ChainOfColors5-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/ChainOfColors5-v0.zip)
+32. [Download `ChainOfColors7-v0` dataset](https://huggingface.co/datasets/avanturist/mikasa-robo/resolve/main/ChainOfColors7-v0.zip)
 
 Example of the dataset structure for `ShellGameTouch-v0` with episode timeout T = 90:
 ```python
