@@ -36,7 +36,7 @@
 </p>
 
 <p align="center">
-    <b>🎯 ALL 32 DATASETS NOW AVAILABLE AT [HUGGINFACE](https://huggingface.co/datasets/avanturist/mikasa-robo/tree/main)! 🎯</b><br>
+    <b>🎯 ALL 32 DATASETS NOW AVAILABLE!🎯</b><br>
     <i>Check out our <a href="#datasets-for-offline-rl">memory-intensive training datasets</a> for Offline RL!</i>
 </p>
 
