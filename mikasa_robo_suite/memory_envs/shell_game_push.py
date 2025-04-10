@@ -143,7 +143,7 @@ class ShellGamePushEnv(BaseEnv):
             add_collision=False,
             initial_pose=sapien.Pose(p=[0, 0, self.GOAL_THRESH]),
         )
-        # self._hidden_objects.append(self.goal_site)
+        self._hidden_objects.append(self.goal_site)
 
         self.red_ball = actors.build_sphere(
             self.scene,
