@@ -504,6 +504,8 @@ class Args:
     reward_mode: str = 'normalized_dense' # sparse | normalized_dense
     """the mode of the reward function"""
 
+    control_mode: str = 'pd_ee_delta_pose' # pd_joint_delta_pos
+
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -1024,9 +1026,9 @@ if __name__ == "__main__":
 
     # env setup
     if MODE not in ['state', 'state_oracle']:
-        env_kwargs = dict(obs_mode="rgb", control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu", reward_mode=args.reward_mode)
+        env_kwargs = dict(obs_mode="rgb", control_mode=args.control_mode, render_mode=args.render_mode, sim_backend="gpu", reward_mode=args.reward_mode)
     else:
-        env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu", reward_mode=args.reward_mode) # render_mode="rgb_array",
+        env_kwargs = dict(obs_mode="state", control_mode=args.control_mode, render_mode=args.render_mode, sim_backend="gpu", reward_mode=args.reward_mode) # render_mode="rgb_array",
 
     eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq,  **env_kwargs) # , reconfigure_freq=args.eval_reconfiguration_freq
     envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)

@@ -10,6 +10,9 @@ from typing import Optional
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+# print(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 from mani_skill.utils.wrappers import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
@@ -168,7 +171,7 @@ def collect_batched_data_from_ckpt(
 
     env_kwargs_state = dict(
         obs_mode="state",
-        control_mode="pd_joint_delta_pos",
+        control_mode="pd_ee_delta_pose",
         render_mode="all",
         sim_backend="gpu",
         reward_mode="normalized_dense"
@@ -176,7 +179,7 @@ def collect_batched_data_from_ckpt(
 
     env_kwargs_rgb = dict(
         obs_mode="rgb",
-        control_mode="pd_joint_delta_pos",
+        control_mode="pd_ee_delta_pose",
         render_mode="all",
         sim_backend="gpu",
         reward_mode="normalized_dense"
@@ -341,7 +344,7 @@ def get_list_of_all_checkpoints_available(ckpt_dir="."):
         raise FileNotFoundError(f"Directory {oracle_checkpoints_dir} does not exist.")
     
     checkpoint_paths = []
-    
+
     # 2) Iterate over all directories in oracle_checkpoints/ppo_memtasks/state/normalized_dense/
     normalized_dense_dir = os.path.join(oracle_checkpoints_dir, "ppo_memtasks", "state", "normalized_dense")
     for env_dir in os.listdir(normalized_dense_dir):
