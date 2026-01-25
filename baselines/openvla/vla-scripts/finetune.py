@@ -792,7 +792,7 @@ def finetune(cfg: FinetuneConfig) -> None:
     # Initialize Logging =>> W&B
     if distributed_state.is_main_process:
         exp_namee = str(cfg.data_root_dir).split('/')[-1]
-        wandb.login(key="94838fbb7e6b76591a416382f5cea0b64d88ee24")
+        wandb.login(key="your_key")
         wandb.init(project="MikasaRoboVLA", name=f"OpenVLA_dinetune_{exp_namee}")
 
     # Print detected constants
