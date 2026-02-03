@@ -227,6 +227,7 @@ class RenderRewardInfoWrapper(gym.Wrapper):
         
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
+        self.reward = None
         return obs, info
     
     def step(self, action):
@@ -242,23 +243,23 @@ class RenderRewardInfoWrapper(gym.Wrapper):
 
         for i in range(len(frame)):
             if self.reward is not None:
-                # Target cup
-                # print(f"{self.reward.shape=}, {self.reward[i]=}")
                 render_reward = self.reward[i].detach().cpu().numpy()
-                cv2.putText(
-                    frame[i],
-                    f'Reward: {render_reward:.3f}',
-                    (10, 120),  # position
-                    cv2.FONT_HERSHEY_SIMPLEX,  # font
-                    1.0,  # font scale
-                    (255, 255, 255),  # color (white)
-                    2,  # thickness
-                    cv2.LINE_AA
-                )
-            
+            else:
+                render_reward = 0.0
+            cv2.putText(
+                frame[i],
+                f'Reward: {render_reward:.3f}',
+                (10, 120),  # position
+                cv2.FONT_HERSHEY_SIMPLEX,  # font
+                1.0,  # font scale
+                (255, 255, 255),  # color (white)
+                2,  # thickness
+                cv2.LINE_AA
+            )
+
         return frame
-    
-    
+
+
 class CameraShutdownWrapper(gym.Wrapper):
     """Wrapper that zeros out all camera observations
     
