@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
-"""Build benchmark demo videos: general render + top/wrist side panel.
+"""Generate benchmark demo media for MIKASA-Robo VLA tasks.
 
-For each selected environment, the script runs one episode using either:
-1) PPO checkpoint rollout, or
-2) motion-planning script.
+For every task (by default from `mikasa_robo_vla_envs.csv`) this script:
+1. Runs oracle rollout (PPO checkpoint and/or motion planning),
+2. Retries with different seeds until success,
+3. Composes output frame as: [general render | top over wrist],
+4. Exports both:
+   - web-friendly mp4 (H.264, yuv420p, faststart),
+   - gif.
 
-Then it creates a final mp4 with layout:
-    [ general render | top (upper-right) / wrist (lower-right) ]
-
-Typical usage:
-    python utils/prepare_benchmark_demo_videos.py --overwrite
-    python utils/prepare_benchmark_demo_videos.py --tasks RememberColor3-VLA-v0,RememberColor5-VLA-v0
-    python utils/prepare_benchmark_demo_videos.py --policy-preference ppo_first --overwrite
+Notes:
+- PPO path keeps step + env-specific wrappers and removes reward render/debug wrappers.
+- Motion-planning path uses each planner's `--overlay-info` flag
+  (default `0`, which removes debug overlays in planner scripts).
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import shutil
 import subprocess
@@ -40,18 +42,17 @@ from mikasa_robo_suite.vla.dataset_collectors.get_mikasa_robo_datasets import (
     get_list_of_all_checkpoints_available,
 )
 
-DEFAULT_TASKS_FROM_DATA_DIR = Path("data_mikasa_robo/data_npz")
+DEFAULT_TASKS_CSV = Path("mikasa_robo_vla_envs.csv")
 DEFAULT_OUTPUT_DIR = Path("videos/benchmark_demos")
+MOTION_ROOT = Path("mikasa_robo_suite/vla/utils/motion_planning")
 
-# Motion-planning env set currently supported by existing planner scripts.
-BATTERY_LEVELS = (3, 6, 9, 12, 15)
-MOTION_DEFAULT_ENVS = {
-    *(f"BatteriesCheckerEasy-{n}-VLA-v0" for n in BATTERY_LEVELS),
-    *(f"BatteriesCheckerHard-{n}-VLA-v0" for n in BATTERY_LEVELS),
-    "BlinkCountButtonPressEasy-VLA-v0",
-    "BlinkCountButtonPressMedium-VLA-v0",
-    "BlinkCountButtonPressHard-VLA-v0",
-}
+
+@dataclass
+class TaskSpec:
+    env_id: str
+    source_hint: Optional[str]
+    configured: bool
+    prompt: str
 
 
 @dataclass
@@ -65,53 +66,79 @@ class EpisodeStreams:
 
 
 @dataclass
+class MotionEpisodeArtifacts:
+    general_mp4: Path
+    trajectory_h5: Path
+    fps: float
+    success: bool
+    top_camera_key: str
+    wrist_camera_key: str
+    source_meta: Dict[str, Any]
+
+
+@dataclass
 class TaskResult:
     env_id: str
+    source_hint: Optional[str]
     policy: str
-    final_video: str
+    final_mp4: str
+    final_gif: str
     frames_written: int
     fps: float
     success: bool
+    attempts_tried: int
+    seed_used: Optional[int]
     skipped: bool = False
     error: Optional[str] = None
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate benchmark demo videos with layout: general | (top over wrist)."
+        description="Generate benchmark demo media (H264 mp4 + gif) with layout: general | (top over wrist)."
+    )
+    parser.add_argument(
+        "--tasks-csv",
+        type=Path,
+        default=DEFAULT_TASKS_CSV,
+        help="CSV file with benchmark tasks, e.g. mikasa_robo_vla_envs.csv.",
     )
     parser.add_argument(
         "--tasks",
         type=str,
         default="",
-        help="Comma-separated env ids. Empty => auto-discover.",
+        help="Optional comma-separated env ids. If empty, use tasks from --tasks-csv.",
     )
     parser.add_argument(
-        "--tasks-from-data-dir",
-        type=Path,
-        default=DEFAULT_TASKS_FROM_DATA_DIR,
-        help="Default source of benchmark env list (directory with per-task subfolders).",
+        "--include-unconfigured",
+        action="store_true",
+        help="Include rows where CSV column 'Configured' is false.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=DEFAULT_OUTPUT_DIR,
-        help="Directory to store composed videos and metadata.",
+        help="Directory to store final media and metadata.",
     )
     parser.add_argument(
         "--ckpt-dir",
         type=Path,
         default=Path("."),
-        help="Root directory for oracle PPO checkpoints discovery.",
+        help="Root directory used to discover oracle PPO checkpoints.",
     )
     parser.add_argument(
         "--policy-preference",
         type=str,
-        choices=("motion_first", "ppo_first"),
-        default="motion_first",
-        help="When both are available for an env, choose motion or PPO first.",
+        choices=("source_first", "motion_first", "ppo_first"),
+        default="source_first",
+        help="How to prioritize policy type when both are available.",
     )
-    parser.add_argument("--seed", type=int, default=123, help="Seed for rollout.")
+    parser.add_argument("--seed", type=int, default=123, help="Base seed for rollout attempts.")
+    parser.add_argument(
+        "--max-attempts-per-task",
+        type=int,
+        default=8,
+        help="Try seeds [seed, seed+1, ...] until success.",
+    )
     parser.add_argument(
         "--sim-backend",
         type=str,
@@ -126,34 +153,62 @@ def parse_args() -> argparse.Namespace:
         help="Optional max steps override for PPO episode.",
     )
     parser.add_argument(
+        "--motion-overlay-info",
+        type=int,
+        choices=(0, 1),
+        default=0,
+        help="Value passed to planner --overlay-info (0 disables planner debug overlays).",
+    )
+    parser.add_argument(
+        "--gif-fps",
+        type=int,
+        default=12,
+        help="Target FPS for GIF export.",
+    )
+    parser.add_argument(
+        "--gif-max-width",
+        type=int,
+        default=0,
+        help="If >0, downscale GIF width to this value while preserving aspect ratio.",
+    )
+    parser.add_argument(
+        "--h264-crf",
+        type=int,
+        default=20,
+        help="H.264 quality factor (lower = better quality, larger files).",
+    )
+    parser.add_argument(
+        "--h264-preset",
+        type=str,
+        default="medium",
+        choices=("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"),
+        help="H.264 encoding speed/quality preset.",
+    )
+    parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Overwrite existing final videos.",
+        help="Overwrite existing final mp4/gif.",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print rollout plan and exit.",
+        help="Print the execution plan and exit.",
     )
     parser.add_argument(
         "--keep-intermediate",
         action="store_true",
-        help="Keep raw planner outputs in output-dir/intermediate.",
+        help="Keep intermediate planner outputs in output-dir/intermediate.",
     )
     return parser.parse_args()
 
 
-def to_uint8_rgb(arr: np.ndarray) -> np.ndarray:
-    """Convert RGB image (float/uint8) to contiguous uint8 RGB."""
-    x = np.asarray(arr)
-    if x.dtype == np.uint8:
-        return np.ascontiguousarray(x)
-    x = x.astype(np.float32, copy=False)
-    max_val = float(np.nanmax(x)) if x.size > 0 else 0.0
-    if max_val <= 1.0 + 1e-5:
-        x = x * 255.0
-    x = np.clip(x, 0.0, 255.0).astype(np.uint8, copy=False)
-    return np.ascontiguousarray(x)
+def parse_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    text = str(value).strip().lower()
+    return text in {"1", "true", "yes", "y", "on"}
 
 
 def to_numpy(x: Any) -> np.ndarray:
@@ -169,14 +224,40 @@ def to_bool_scalar(x: Any) -> bool:
     return bool(arr[0])
 
 
-def extract_single_frame(x: Any) -> np.ndarray:
-    """Extract single RGB frame from batched/unbatched tensor/array."""
+def to_uint8_rgb(arr: np.ndarray) -> np.ndarray:
+    """Convert RGB image (float/uint8) to contiguous uint8 RGB."""
+    x = np.asarray(arr)
+    if x.dtype == np.uint8:
+        return np.ascontiguousarray(x)
+    x = x.astype(np.float32, copy=False)
+    max_val = float(np.nanmax(x)) if x.size > 0 else 0.0
+    if max_val <= 1.0 + 1e-5:
+        x = x * 255.0
+    x = np.clip(x, 0.0, 255.0).astype(np.uint8, copy=False)
+    return np.ascontiguousarray(x)
+
+
+def ensure_hwc_rgb(x: Any) -> np.ndarray:
+    """Convert input image tensor/array to [H, W, 3] uint8 RGB."""
     arr = to_numpy(x)
+
+    # Strip singleton leading dims (e.g. [1,H,W,3], [1,1,H,W,3]).
+    while arr.ndim > 3 and arr.shape[0] == 1:
+        arr = arr[0]
+    # If still batched, take first element.
     if arr.ndim == 4:
         arr = arr[0]
-    if arr.ndim != 3 or arr.shape[-1] != 3:
-        raise ValueError(f"Expected frame shape [H,W,3], got {arr.shape}")
+    if arr.ndim != 3:
+        raise ValueError(f"Expected image with 3 dims [H,W,C], got {arr.shape}")
+    if arr.shape[-1] < 3:
+        raise ValueError(f"Expected at least 3 channels, got {arr.shape}")
+    if arr.shape[-1] > 3:
+        arr = arr[..., :3]
     return to_uint8_rgb(arr)
+
+
+def extract_single_frame(x: Any) -> np.ndarray:
+    return ensure_hwc_rgb(x)
 
 
 def get_mp4_fps(mp4_path: Path, fallback: float = 30.0) -> float:
@@ -190,43 +271,164 @@ def get_mp4_fps(mp4_path: Path, fallback: float = 30.0) -> float:
     return fps
 
 
-def read_mp4_frames(mp4_path: Path) -> List[np.ndarray]:
-    cap = cv2.VideoCapture(str(mp4_path))
-    if not cap.isOpened():
-        raise RuntimeError(f"Failed to open video for reading: {mp4_path}")
-    frames: List[np.ndarray] = []
-    while True:
-        ok, bgr = cap.read()
-        if not ok:
-            break
-        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-        frames.append(rgb)
-    cap.release()
-    return frames
-
-
-def write_mp4_frames(mp4_path: Path, frames: Sequence[np.ndarray], fps: float) -> None:
-    if not frames:
-        raise ValueError(f"No frames to write for {mp4_path}")
-    first = to_uint8_rgb(frames[0])
-    h, w = first.shape[:2]
-    mp4_path.parent.mkdir(parents=True, exist_ok=True)
-    writer = cv2.VideoWriter(
-        str(mp4_path),
-        cv2.VideoWriter_fourcc(*"mp4v"),
-        float(fps),
-        (int(w), int(h)),
+def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
+    proc = subprocess.run(
+        list(cmd),
+        cwd=str(cwd) if cwd is not None else None,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
-    if not writer.isOpened():
-        raise RuntimeError(f"Failed to open writer for {mp4_path}")
-    try:
-        for frame in frames:
-            rgb = to_uint8_rgb(frame)
-            if rgb.shape[:2] != (h, w):
-                rgb = cv2.resize(rgb, (w, h), interpolation=cv2.INTER_AREA)
-            writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-    finally:
-        writer.release()
+    if proc.returncode != 0:
+        tail = "\n".join((proc.stderr or "").splitlines()[-60:])
+        raise RuntimeError(f"Command failed ({proc.returncode}): {' '.join(cmd)}\n{tail}")
+    return proc
+
+
+def load_tasks_from_csv(tasks_csv: Path, include_unconfigured: bool) -> List[TaskSpec]:
+    if not tasks_csv.exists():
+        raise FileNotFoundError(f"Task CSV not found: {tasks_csv}")
+
+    tasks: List[TaskSpec] = []
+    with open(tasks_csv, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            env_id = (row.get("name") or row.get("env_id") or "").strip()
+            if not env_id:
+                continue
+            configured = parse_bool(row.get("Configured", True))
+            if not configured and not include_unconfigured:
+                continue
+            source_hint = (row.get("Data Source") or row.get("source") or "").strip().upper() or None
+            prompt = (row.get("prompt") or "").strip()
+            tasks.append(
+                TaskSpec(
+                    env_id=env_id,
+                    source_hint=source_hint,
+                    configured=configured,
+                    prompt=prompt,
+                )
+            )
+    return tasks
+
+
+def resolve_tasks(args: argparse.Namespace) -> List[TaskSpec]:
+    csv_tasks = load_tasks_from_csv(args.tasks_csv, include_unconfigured=args.include_unconfigured)
+    if not args.tasks.strip():
+        return csv_tasks
+
+    requested = [x.strip() for x in args.tasks.split(",") if x.strip()]
+    by_name = {t.env_id: t for t in csv_tasks}
+    out: List[TaskSpec] = []
+    for env_id in requested:
+        if env_id in by_name:
+            out.append(by_name[env_id])
+        else:
+            out.append(TaskSpec(env_id=env_id, source_hint=None, configured=True, prompt=""))
+    return out
+
+
+def resolve_latest_checkpoints(ckpt_dir: Path) -> Dict[str, Path]:
+    raw = get_list_of_all_checkpoints_available(ckpt_dir=str(ckpt_dir))
+    best: Dict[str, Path] = {}
+    for env_id, ckpt_str in raw:
+        ckpt = Path(ckpt_str)
+        if not ckpt.exists():
+            continue
+        if env_id not in best:
+            best[env_id] = ckpt
+            continue
+        if ckpt.stat().st_mtime > best[env_id].stat().st_mtime:
+            best[env_id] = ckpt
+    return best
+
+
+def motion_script_for_env(env_id: str) -> Optional[Path]:
+    if env_id.startswith("BatteriesCheckerEasy-"):
+        return MOTION_ROOT / "motion_planning_batteries_checker_easy.py"
+    if env_id.startswith("BatteriesCheckerHard-"):
+        return MOTION_ROOT / "motion_planning_batteries_checker_hard.py"
+    if env_id.startswith("BlinkCountButtonPress"):
+        if "-Long-" in env_id:
+            return MOTION_ROOT / "motion_planning_blink_count_button_press_long.py"
+        return MOTION_ROOT / "motion_planning_blink_count_button_press.py"
+    if env_id.startswith(("RememberColor", "RememberShape", "RememberShapeAndColor")) and "-Long-" in env_id:
+        return MOTION_ROOT / "motion_planning_remember_long.py"
+    if env_id.startswith(("BunchOfColors", "SeqOfColors", "ChainOfColors")):
+        return MOTION_ROOT / "motion_planning_memory_capacity_colors.py"
+    if env_id.startswith("ShellGameShuffle"):
+        return MOTION_ROOT / "motion_planning_shell_game_shuffle.py"
+    if env_id.startswith("TraceShapeSeq"):
+        return MOTION_ROOT / "motion_planning_trace_shape_seq.py"
+    if env_id.startswith("TraceShape"):
+        return MOTION_ROOT / "motion_planning_trace_shape.py"
+    if env_id.startswith("TimedTransfer"):
+        return MOTION_ROOT / "motion_planning_timed_transfer.py"
+    if env_id.startswith("GatherAndRecall"):
+        return MOTION_ROOT / "motion_planning_gather_and_recall.py"
+    if env_id.startswith("ShellGamePick"):
+        return MOTION_ROOT / "motion_planning_shell_game_pick.py"
+    return None
+
+
+def has_motion_policy(env_id: str) -> bool:
+    script = motion_script_for_env(env_id)
+    return script is not None and script.exists()
+
+
+def policy_candidates(
+    env_id: str,
+    source_hint: Optional[str],
+    checkpoint_map: Dict[str, Path],
+    policy_preference: str,
+) -> List[str]:
+    has_motion = has_motion_policy(env_id)
+    has_ppo = env_id in checkpoint_map
+
+    if not has_motion and not has_ppo:
+        return []
+
+    if policy_preference == "motion_first":
+        order = ["motion_planning", "ppo"]
+    elif policy_preference == "ppo_first":
+        order = ["ppo", "motion_planning"]
+    else:
+        # source_first
+        if source_hint == "MP":
+            order = ["motion_planning", "ppo"]
+        elif source_hint == "PPO":
+            order = ["ppo", "motion_planning"]
+        else:
+            order = ["motion_planning", "ppo"]
+
+    out: List[str] = []
+    for p in order:
+        if p == "motion_planning" and has_motion and p not in out:
+            out.append(p)
+        if p == "ppo" and has_ppo and p not in out:
+            out.append(p)
+    return out
+
+
+def drop_reward_render_wrappers(
+    wrappers_list: Sequence[Tuple[Any, Dict[str, Any]]],
+) -> Tuple[List[Tuple[Any, Dict[str, Any]]], List[str]]:
+    """Drop wrappers that render or expose reward-related debug information.
+
+    This preserves step overlays and env-specific goal/progress overlays while
+    removing reward visualizations.
+    """
+
+    filtered: List[Tuple[Any, Dict[str, Any]]] = []
+    removed_names: List[str] = []
+    for wrapper_class, wrapper_kwargs in wrappers_list:
+        name = getattr(wrapper_class, "__name__", str(wrapper_class))
+        normalized = name.replace("_", "").lower()
+        if "reward" in normalized:
+            removed_names.append(name)
+            continue
+        filtered.append((wrapper_class, wrapper_kwargs))
+    return filtered, removed_names
 
 
 def pick_camera_keys(camera_keys: Sequence[str]) -> Tuple[str, str]:
@@ -253,129 +455,42 @@ def pick_camera_keys(camera_keys: Sequence[str]) -> Tuple[str, str]:
     return top_key, wrist_key
 
 
-def compose_frames(
-    general_frames: Sequence[np.ndarray],
-    top_frames: Sequence[np.ndarray],
-    wrist_frames: Sequence[np.ndarray],
-) -> List[np.ndarray]:
-    n = min(len(general_frames), len(top_frames), len(wrist_frames))
-    if n <= 0:
-        raise ValueError(
-            f"Cannot compose empty streams: "
-            f"general={len(general_frames)}, top={len(top_frames)}, wrist={len(wrist_frames)}"
-        )
+def load_motion_h5_metadata(h5_path: Path) -> Tuple[str, str, bool]:
+    with h5py.File(h5_path, "r") as f:
+        traj_keys = sorted(k for k in f.keys() if k.startswith("traj_"))
+        if not traj_keys:
+            raise ValueError(f"No traj_* groups found in {h5_path}")
+        traj = traj_keys[0]
+        obs_group = f[f"{traj}/obs"]
 
-    first_general = to_uint8_rgb(general_frames[0])
-    g_h, g_w = first_general.shape[:2]
-    side_w = max(1, g_w // 2)
-    top_h = g_h // 2
-    wrist_h = g_h - top_h
+        if "sensor_data" in obs_group:
+            camera_keys = list(obs_group["sensor_data"].keys())
+            top_key, wrist_key = pick_camera_keys(camera_keys)
+        elif "rgb" in obs_group:
+            rgb_arr = obs_group["rgb"]
+            if rgb_arr.ndim != 4 or rgb_arr.shape[-1] < 3:
+                raise ValueError(f"Unexpected flattened rgb shape in {h5_path}: {rgb_arr.shape}")
+            if rgb_arr.shape[-1] >= 6:
+                top_key, wrist_key = "flattened_rgb_cam0", "flattened_rgb_cam1"
+            else:
+                top_key, wrist_key = "flattened_rgb", "flattened_rgb"
+        else:
+            raise ValueError(
+                f"Unsupported trajectory obs layout in {h5_path}: "
+                f"expected 'sensor_data' or 'rgb', got keys={list(obs_group.keys())}"
+            )
 
-    out: List[np.ndarray] = []
-    for idx in range(n):
-        g = to_uint8_rgb(general_frames[idx])
-        if g.shape[:2] != (g_h, g_w):
-            g = cv2.resize(g, (g_w, g_h), interpolation=cv2.INTER_AREA)
-
-        top = cv2.resize(to_uint8_rgb(top_frames[idx]), (side_w, top_h), interpolation=cv2.INTER_AREA)
-        wrist = cv2.resize(
-            to_uint8_rgb(wrist_frames[idx]),
-            (side_w, wrist_h),
-            interpolation=cv2.INTER_AREA,
-        )
-
-        cv2.putText(top, "top", (8, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
-        cv2.putText(wrist, "wrist", (8, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
-
-        right = np.concatenate([top, wrist], axis=0)
-        composed = np.concatenate([g, right], axis=1)
-        out.append(np.ascontiguousarray(composed))
-    return out
-
-
-def motion_script_for_env(env_id: str) -> Optional[Path]:
-    root = Path("mikasa_robo_suite/vla/utils/motion_planning")
-    if env_id.startswith("BatteriesCheckerEasy-"):
-        return root / "motion_planning_batteries_checker_easy.py"
-    if env_id.startswith("BatteriesCheckerHard-"):
-        return root / "motion_planning_batteries_checker_hard.py"
-    if env_id.startswith("BlinkCountButtonPress"):
-        return root / "motion_planning_blink_count_button_press.py"
-    return None
-
-
-def is_motion_supported(env_id: str) -> bool:
-    return motion_script_for_env(env_id) is not None
-
-
-def resolve_latest_checkpoints(ckpt_dir: Path) -> Dict[str, Path]:
-    raw = get_list_of_all_checkpoints_available(ckpt_dir=str(ckpt_dir))
-    best: Dict[str, Path] = {}
-    for env_id, ckpt_str in raw:
-        ckpt = Path(ckpt_str)
-        if not ckpt.exists():
-            continue
-        if env_id not in best:
-            best[env_id] = ckpt
-            continue
-        if ckpt.stat().st_mtime > best[env_id].stat().st_mtime:
-            best[env_id] = ckpt
-    return best
-
-
-def discover_tasks(tasks_csv: str, tasks_from_data_dir: Path, checkpoint_map: Dict[str, Path]) -> List[str]:
-    if tasks_csv.strip():
-        return [t.strip() for t in tasks_csv.split(",") if t.strip()]
-
-    tasks: set[str] = set()
-    if tasks_from_data_dir.exists():
-        tasks.update(p.name for p in tasks_from_data_dir.iterdir() if p.is_dir() and not p.name.startswith("_"))
-    tasks.update(checkpoint_map.keys())
-    tasks.update(MOTION_DEFAULT_ENVS)
-    return sorted(tasks)
-
-
-def choose_policy(
-    env_id: str,
-    checkpoint_map: Dict[str, Path],
-    policy_preference: str,
-) -> str:
-    has_motion = is_motion_supported(env_id)
-    has_ppo = env_id in checkpoint_map
-
-    if policy_preference == "motion_first":
-        if has_motion:
-            return "motion_planning"
-        if has_ppo:
-            return "ppo"
-    elif policy_preference == "ppo_first":
-        if has_ppo:
-            return "ppo"
-        if has_motion:
-            return "motion_planning"
-
-    raise ValueError(f"No available policy for {env_id}. motion_supported={has_motion}, ppo_checkpoint_found={has_ppo}")
-
-
-def drop_video_text_wrappers(
-    wrappers_list: Sequence[Tuple[Any, Dict[str, Any]]],
-) -> List[Tuple[Any, Dict[str, Any]]]:
-    """Remove wrappers that draw step/reward/reward_dict overlays."""
-    blocked = {"RenderStepInfoWrapper", "RenderRewardInfoWrapper", "DebugRewardWrapper"}
-    filtered: List[Tuple[Any, Dict[str, Any]]] = []
-    for wrapper_class, wrapper_kwargs in wrappers_list:
-        name = getattr(wrapper_class, "__name__", str(wrapper_class))
-        if name in blocked:
-            continue
-        filtered.append((wrapper_class, wrapper_kwargs))
-    return filtered
+        success_arr = np.asarray(f[f"{traj}/success"]) if f"{traj}/success" in f else np.array([], dtype=np.bool_)
+        success = bool(success_arr.any()) if success_arr.size > 0 else False
+    return top_key, wrist_key, success
 
 
 def run_motion_planning_episode(
     env_id: str,
     seed: int,
     run_dir: Path,
-) -> EpisodeStreams:
+    overlay_info: int,
+) -> MotionEpisodeArtifacts:
     script = motion_script_for_env(env_id)
     if script is None:
         raise ValueError(f"Motion-planning script not found for env_id={env_id}")
@@ -394,7 +509,7 @@ def run_motion_planning_episode(
         "--save-video",
         "1",
         "--overlay-info",
-        "0",
+        str(int(overlay_info)),
         "--save-trajectory",
         "1",
         "--trajectory-dir",
@@ -402,16 +517,7 @@ def run_motion_planning_episode(
         "--trajectory-name",
         "trajectory",
     ]
-    proc = subprocess.run(
-        cmd,
-        cwd=str(Path.cwd()),
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if proc.returncode != 0:
-        tail = "\n".join((proc.stderr or "").splitlines()[-40:])
-        raise RuntimeError(f"Motion planner failed for {env_id}:\n{tail}")
+    run_cmd(cmd, cwd=Path.cwd())
 
     mp4_candidates = sorted(run_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
     if not mp4_candidates:
@@ -423,75 +529,26 @@ def run_motion_planning_episode(
         raise FileNotFoundError(f"No trajectory h5 was produced in {run_dir}")
     trajectory_h5 = h5_candidates[-1]
 
-    general_frames = read_mp4_frames(general_mp4)
     fps = get_mp4_fps(general_mp4, fallback=30.0)
-    top_frames, wrist_frames, top_key, wrist_key, success = load_camera_streams_from_h5(trajectory_h5)
+    top_key, wrist_key, success = load_motion_h5_metadata(trajectory_h5)
 
-    return EpisodeStreams(
-        general_frames=general_frames,
-        top_frames=top_frames,
-        wrist_frames=wrist_frames,
+    return MotionEpisodeArtifacts(
+        general_mp4=general_mp4,
+        trajectory_h5=trajectory_h5,
         fps=fps,
         success=success,
+        top_camera_key=top_key,
+        wrist_camera_key=wrist_key,
         source_meta={
             "policy": "motion_planning",
             "script": str(script),
-            "trajectory_h5": str(trajectory_h5),
             "general_mp4": str(general_mp4),
+            "trajectory_h5": str(trajectory_h5),
             "top_camera_key": top_key,
             "wrist_camera_key": wrist_key,
+            "overlay_info": int(overlay_info),
         },
     )
-
-
-def load_camera_streams_from_h5(
-    h5_path: Path,
-) -> Tuple[List[np.ndarray], List[np.ndarray], str, str, bool]:
-    with h5py.File(h5_path, "r") as f:
-        traj_keys = sorted(k for k in f.keys() if k.startswith("traj_"))
-        if not traj_keys:
-            raise ValueError(f"No traj_* groups found in {h5_path}")
-        traj = traj_keys[0]
-        obs_group = f[f"{traj}/obs"]
-
-        # Format A: raw camera tree
-        # traj_0/obs/sensor_data/<camera>/rgb
-        if "sensor_data" in obs_group:
-            sensor_group = obs_group["sensor_data"]
-            camera_keys = list(sensor_group.keys())
-            top_key, wrist_key = pick_camera_keys(camera_keys)
-
-            top_arr = np.asarray(sensor_group[top_key]["rgb"])
-            wrist_arr = np.asarray(sensor_group[wrist_key]["rgb"])
-        # Format B: flattened RGB tensor from FlattenRGBDObservationWrapper
-        # traj_0/obs/rgb with channels concatenated across cameras, e.g. [..., 6]
-        elif "rgb" in obs_group:
-            rgb_arr = np.asarray(obs_group["rgb"])
-            if rgb_arr.ndim != 4 or rgb_arr.shape[-1] < 3:
-                raise ValueError(f"Unexpected flattened rgb shape in {h5_path}: {rgb_arr.shape}")
-
-            if rgb_arr.shape[-1] >= 6:
-                top_arr = rgb_arr[..., :3]
-                wrist_arr = rgb_arr[..., 3:6]
-                top_key = "flattened_rgb_cam0"
-                wrist_key = "flattened_rgb_cam1"
-            else:
-                top_arr = rgb_arr[..., :3]
-                wrist_arr = rgb_arr[..., :3]
-                top_key = "flattened_rgb"
-                wrist_key = "flattened_rgb"
-        else:
-            raise ValueError(
-                f"Unsupported trajectory obs layout in {h5_path}: "
-                f"expected 'sensor_data' or 'rgb', got keys={list(obs_group.keys())}"
-            )
-
-        success_arr = np.asarray(f[f"{traj}/success"]) if f"{traj}/success" in f else np.array([], dtype=np.bool_)
-
-    top_frames = [to_uint8_rgb(top_arr[i]) for i in range(top_arr.shape[0])]
-    wrist_frames = [to_uint8_rgb(wrist_arr[i]) for i in range(wrist_arr.shape[0])]
-    success = bool(success_arr.any()) if success_arr.size > 0 else False
-    return top_frames, wrist_frames, top_key, wrist_key, success
 
 
 def run_ppo_episode(
@@ -501,12 +558,17 @@ def run_ppo_episode(
     sim_backend: str,
     ppo_max_steps: Optional[int],
 ) -> EpisodeStreams:
-    # CPU inference is sufficient for one demo episode and avoids CUDA-runtime
-    # issues on machines where driver/runtime availability is inconsistent.
+    # CPU inference is enough for a single deterministic demo rollout.
     device = torch.device("cpu")
 
-    wrappers_list, env_timeout = env_info(env_id)
-    wrappers_list = drop_video_text_wrappers(wrappers_list)
+    try:
+        wrappers_list, env_timeout = env_info(env_id)
+    except ValueError:
+        wrappers_list = []
+        spec = gym.spec(env_id)
+        env_timeout = int(spec.max_episode_steps)
+
+    wrappers_list, removed_wrappers = drop_reward_render_wrappers(wrappers_list)
     max_steps = int(ppo_max_steps) if ppo_max_steps is not None else int(env_timeout)
 
     chosen_sim_backend = sim_backend
@@ -555,8 +617,7 @@ def run_ppo_episode(
         agent.eval()
 
         obs_state, _ = env_state.reset(seed=[seed])
-        obs_rgb, info_rgb = env_rgb.reset(seed=[seed])
-        del info_rgb
+        obs_rgb, _ = env_rgb.reset(seed=[seed])
 
         camera_keys = list(obs_rgb["sensor_data"].keys())
         top_key, wrist_key = pick_camera_keys(camera_keys)
@@ -569,7 +630,6 @@ def run_ppo_episode(
         for _ in range(max_steps):
             general_render = env_rgb.render()
             general_frames.append(extract_single_frame(general_render))
-
             top_frames.append(extract_single_frame(obs_rgb["sensor_data"][top_key]["rgb"]))
             wrist_frames.append(extract_single_frame(obs_rgb["sensor_data"][wrist_key]["rgb"]))
 
@@ -589,6 +649,21 @@ def run_ppo_episode(
             done_now = success_now or to_bool_scalar(term_rgb) or to_bool_scalar(trunc_rgb)
             episode_success = episode_success or success_now
             if done_now:
+                # Keep terminal frame so the last success-transition step is visible.
+                terminal_general = extract_single_frame(env_rgb.render())
+                general_frames.append(terminal_general)
+                try:
+                    terminal_top = extract_single_frame(obs_rgb["sensor_data"][top_key]["rgb"])
+                    terminal_wrist = extract_single_frame(obs_rgb["sensor_data"][wrist_key]["rgb"])
+                except Exception:  # noqa: BLE001
+                    if top_frames and wrist_frames:
+                        terminal_top = top_frames[-1]
+                        terminal_wrist = wrist_frames[-1]
+                    else:
+                        terminal_top = terminal_general
+                        terminal_wrist = terminal_general
+                top_frames.append(terminal_top)
+                wrist_frames.append(terminal_wrist)
                 break
 
         return EpisodeStreams(
@@ -604,6 +679,7 @@ def run_ppo_episode(
                 "wrist_camera_key": wrist_key,
                 "max_steps": max_steps,
                 "sim_backend": chosen_sim_backend,
+                "reward_wrappers_removed": removed_wrappers,
             },
         )
     finally:
@@ -611,154 +687,531 @@ def run_ppo_episode(
         env_rgb.close()
 
 
+def draw_panel_label(img: np.ndarray, text: str) -> None:
+    cv2.putText(img, text, (8, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(img, text, (8, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 1, cv2.LINE_AA)
+
+
+def compose_single_frame(
+    general_frame: np.ndarray,
+    top_frame: np.ndarray,
+    wrist_frame: np.ndarray,
+) -> np.ndarray:
+    g = to_uint8_rgb(general_frame)
+    t = to_uint8_rgb(top_frame)
+    w = to_uint8_rgb(wrist_frame)
+
+    g_h, g_w = g.shape[:2]
+    side_w = max(1, g_w // 2)
+    top_h = g_h // 2
+    wrist_h = g_h - top_h
+
+    t = cv2.resize(t, (side_w, top_h), interpolation=cv2.INTER_AREA)
+    w = cv2.resize(w, (side_w, wrist_h), interpolation=cv2.INTER_AREA)
+
+    draw_panel_label(t, "top")
+    draw_panel_label(w, "wrist")
+
+    right = np.concatenate([t, w], axis=0)
+    out = np.concatenate([g, right], axis=1)
+    return np.ascontiguousarray(out)
+
+
+def compose_frames(
+    general_frames: Sequence[np.ndarray],
+    top_frames: Sequence[np.ndarray],
+    wrist_frames: Sequence[np.ndarray],
+) -> List[np.ndarray]:
+    n_general = len(general_frames)
+    n_top = len(top_frames)
+    n_wrist = len(wrist_frames)
+    n = max(n_general, n_top, n_wrist)
+    if n <= 0:
+        raise ValueError(
+            f"Cannot compose empty streams: "
+            f"general={n_general}, top={n_top}, wrist={n_wrist}"
+        )
+    out: List[np.ndarray] = []
+    for idx in range(n):
+        g_idx = min(idx, n_general - 1)
+        t_idx = min(idx, n_top - 1)
+        w_idx = min(idx, n_wrist - 1)
+        out.append(
+            compose_single_frame(
+                general_frame=general_frames[g_idx],
+                top_frame=top_frames[t_idx],
+                wrist_frame=wrist_frames[w_idx],
+            )
+        )
+    return out
+
+
+def write_raw_mp4_frames(mp4_path: Path, frames: Sequence[np.ndarray], fps: float) -> None:
+    if not frames:
+        raise ValueError(f"No frames to write for {mp4_path}")
+    first = to_uint8_rgb(frames[0])
+    h, w = first.shape[:2]
+    mp4_path.parent.mkdir(parents=True, exist_ok=True)
+    writer = cv2.VideoWriter(
+        str(mp4_path),
+        cv2.VideoWriter_fourcc(*"mp4v"),
+        float(fps),
+        (int(w), int(h)),
+    )
+    if not writer.isOpened():
+        raise RuntimeError(f"Failed to open writer for {mp4_path}")
+    try:
+        for frame in frames:
+            rgb = to_uint8_rgb(frame)
+            if rgb.shape[:2] != (h, w):
+                rgb = cv2.resize(rgb, (w, h), interpolation=cv2.INTER_AREA)
+            writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+    finally:
+        writer.release()
+
+
+def compose_motion_to_raw_mp4(
+    artifacts: MotionEpisodeArtifacts,
+    out_raw_mp4: Path,
+) -> int:
+    cap = cv2.VideoCapture(str(artifacts.general_mp4))
+    if not cap.isOpened():
+        raise RuntimeError(f"Failed to open motion planner video: {artifacts.general_mp4}")
+
+    out_raw_mp4.parent.mkdir(parents=True, exist_ok=True)
+    writer: Optional[cv2.VideoWriter] = None
+    frames_written = 0
+    last_general_rgb: Optional[np.ndarray] = None
+
+    try:
+        with h5py.File(artifacts.trajectory_h5, "r") as f:
+            traj_keys = sorted(k for k in f.keys() if k.startswith("traj_"))
+            if not traj_keys:
+                raise ValueError(f"No traj_* groups found in {artifacts.trajectory_h5}")
+            traj = traj_keys[0]
+            obs_group = f[f"{traj}/obs"]
+
+            if "sensor_data" in obs_group:
+                sensor_group = obs_group["sensor_data"]
+                top_ds = sensor_group[artifacts.top_camera_key]["rgb"]
+                wrist_ds = sensor_group[artifacts.wrist_camera_key]["rgb"]
+                n_side = int(min(top_ds.shape[0], wrist_ds.shape[0]))
+
+                def get_side(i: int) -> Tuple[np.ndarray, np.ndarray]:
+                    return np.asarray(top_ds[i]), np.asarray(wrist_ds[i])
+
+            elif "rgb" in obs_group:
+                rgb_ds = obs_group["rgb"]
+                if rgb_ds.ndim != 4 or rgb_ds.shape[-1] < 3:
+                    raise ValueError(f"Unexpected flattened rgb shape in {artifacts.trajectory_h5}: {rgb_ds.shape}")
+                n_side = int(rgb_ds.shape[0])
+
+                if rgb_ds.shape[-1] >= 6:
+
+                    def get_side(i: int) -> Tuple[np.ndarray, np.ndarray]:
+                        frame = np.asarray(rgb_ds[i])
+                        return frame[..., :3], frame[..., 3:6]
+
+                else:
+
+                    def get_side(i: int) -> Tuple[np.ndarray, np.ndarray]:
+                        frame = np.asarray(rgb_ds[i])
+                        rgb = frame[..., :3]
+                        return rgb, rgb
+
+            else:
+                raise ValueError(
+                    f"Unsupported trajectory obs layout in {artifacts.trajectory_h5}: "
+                    f"expected 'sensor_data' or 'rgb', got keys={list(obs_group.keys())}"
+                )
+
+            for i in range(n_side):
+                ok, bgr = cap.read()
+                if ok:
+                    general_rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+                    last_general_rgb = general_rgb
+                elif last_general_rgb is not None:
+                    # Some recorder setups end 1 frame earlier than side-camera stream.
+                    # Repeat the last general frame to avoid cutting the terminal step.
+                    general_rgb = last_general_rgb
+                else:
+                    break
+                top_raw, wrist_raw = get_side(i)
+                composed = compose_single_frame(general_rgb, ensure_hwc_rgb(top_raw), ensure_hwc_rgb(wrist_raw))
+
+                if writer is None:
+                    h, w = composed.shape[:2]
+                    writer = cv2.VideoWriter(
+                        str(out_raw_mp4),
+                        cv2.VideoWriter_fourcc(*"mp4v"),
+                        float(artifacts.fps),
+                        (int(w), int(h)),
+                    )
+                    if not writer.isOpened():
+                        raise RuntimeError(f"Failed to open writer for {out_raw_mp4}")
+
+                writer.write(cv2.cvtColor(composed, cv2.COLOR_RGB2BGR))
+                frames_written += 1
+    finally:
+        cap.release()
+        if writer is not None:
+            writer.release()
+
+    if frames_written <= 0:
+        raise RuntimeError(f"No composed frames produced from {artifacts.general_mp4} + {artifacts.trajectory_h5}")
+    return frames_written
+
+
+def transcode_to_web_mp4(
+    raw_mp4: Path,
+    output_mp4: Path,
+    crf: int,
+    preset: str,
+) -> None:
+    output_mp4.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(raw_mp4),
+        "-an",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-preset",
+        str(preset),
+        "-crf",
+        str(int(crf)),
+        str(output_mp4),
+    ]
+    run_cmd(cmd)
+
+
+def write_gif_from_mp4(
+    mp4_path: Path,
+    gif_path: Path,
+    gif_fps: int,
+    gif_max_width: int,
+) -> None:
+    gif_path.parent.mkdir(parents=True, exist_ok=True)
+
+    vf_parts = [f"fps={max(1, int(gif_fps))}"]
+    if gif_max_width > 0:
+        vf_parts.append(f"scale={int(gif_max_width)}:-1:flags=lanczos:force_original_aspect_ratio=decrease")
+    vf = ",".join(vf_parts)
+
+    with tempfile.TemporaryDirectory(prefix="gif_palette_") as td:
+        palette_path = Path(td) / "palette.png"
+        run_cmd(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(mp4_path),
+                "-vf",
+                f"{vf},palettegen",
+                str(palette_path),
+            ]
+        )
+        run_cmd(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(mp4_path),
+                "-i",
+                str(palette_path),
+                "-lavfi",
+                f"{vf}[x];[x][1:v]paletteuse",
+                str(gif_path),
+            ]
+        )
+
+
+def try_export_successful_episode(
+    task: TaskSpec,
+    policy: str,
+    args: argparse.Namespace,
+    checkpoint_map: Dict[str, Path],
+    output_dir: Path,
+) -> Tuple[TaskResult, Dict[str, Any]]:
+    final_dir = output_dir / "final"
+    final_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = task.env_id.replace("/", "_")
+    final_mp4 = final_dir / f"{safe_name}.mp4"
+    final_gif = final_dir / f"{safe_name}.gif"
+
+    if final_mp4.exists() and final_gif.exists() and not args.overwrite:
+        return (
+            TaskResult(
+                env_id=task.env_id,
+                source_hint=task.source_hint,
+                policy=policy,
+                final_mp4=str(final_mp4),
+                final_gif=str(final_gif),
+                frames_written=0,
+                fps=0.0,
+                success=False,
+                attempts_tried=0,
+                seed_used=None,
+                skipped=True,
+            ),
+            {},
+        )
+
+    if args.max_attempts_per_task <= 0:
+        raise ValueError(f"--max-attempts-per-task must be > 0, got {args.max_attempts_per_task}")
+
+    attempt_errors: List[str] = []
+    attempts_tried = 0
+
+    for attempt_idx in range(args.max_attempts_per_task):
+        attempts_tried += 1
+        seed = int(args.seed) + attempt_idx
+
+        try:
+            with tempfile.TemporaryDirectory(prefix=f"demo_{safe_name}_seed_{seed}_") as td:
+                tmp_dir = Path(td)
+                raw_composed_mp4 = tmp_dir / f"{safe_name}_composed_raw.mp4"
+
+                if policy == "motion_planning":
+                    if args.keep_intermediate:
+                        run_dir = output_dir / "intermediate" / safe_name / f"motion_seed_{seed}"
+                        if run_dir.exists() and args.overwrite:
+                            shutil.rmtree(run_dir)
+                        run_dir.mkdir(parents=True, exist_ok=True)
+                    else:
+                        run_dir = tmp_dir / "motion"
+                        run_dir.mkdir(parents=True, exist_ok=True)
+
+                    artifacts = run_motion_planning_episode(
+                        env_id=task.env_id,
+                        seed=seed,
+                        run_dir=run_dir,
+                        overlay_info=int(args.motion_overlay_info),
+                    )
+                    if not artifacts.success:
+                        attempt_errors.append(f"seed={seed}: planner rollout ended without success.")
+                        continue
+
+                    frames_written = compose_motion_to_raw_mp4(artifacts=artifacts, out_raw_mp4=raw_composed_mp4)
+                    fps = float(artifacts.fps)
+                    source_meta = artifacts.source_meta
+                elif policy == "ppo":
+                    ckpt = checkpoint_map.get(task.env_id)
+                    if ckpt is None:
+                        raise ValueError(f"PPO checkpoint not found for {task.env_id}")
+                    streams = run_ppo_episode(
+                        env_id=task.env_id,
+                        checkpoint_path=ckpt,
+                        seed=seed,
+                        sim_backend=args.sim_backend,
+                        ppo_max_steps=args.ppo_max_steps,
+                    )
+                    if not streams.success:
+                        attempt_errors.append(f"seed={seed}: PPO rollout ended without success.")
+                        continue
+
+                    composed = compose_frames(
+                        general_frames=streams.general_frames,
+                        top_frames=streams.top_frames,
+                        wrist_frames=streams.wrist_frames,
+                    )
+                    write_raw_mp4_frames(raw_composed_mp4, composed, fps=streams.fps)
+                    frames_written = len(composed)
+                    fps = float(streams.fps)
+                    source_meta = streams.source_meta
+                else:
+                    raise ValueError(f"Unknown policy: {policy}")
+
+                transcode_to_web_mp4(
+                    raw_mp4=raw_composed_mp4,
+                    output_mp4=final_mp4,
+                    crf=int(args.h264_crf),
+                    preset=str(args.h264_preset),
+                )
+                write_gif_from_mp4(
+                    mp4_path=final_mp4,
+                    gif_path=final_gif,
+                    gif_fps=int(args.gif_fps),
+                    gif_max_width=int(args.gif_max_width),
+                )
+
+                result = TaskResult(
+                    env_id=task.env_id,
+                    source_hint=task.source_hint,
+                    policy=policy,
+                    final_mp4=str(final_mp4),
+                    final_gif=str(final_gif),
+                    frames_written=frames_written,
+                    fps=fps,
+                    success=True,
+                    attempts_tried=attempts_tried,
+                    seed_used=seed,
+                    skipped=False,
+                )
+                return result, source_meta
+        except Exception as exc:  # noqa: BLE001
+            attempt_errors.append(f"seed={seed}: {exc}")
+
+    joined_errors = "\n".join(attempt_errors[-8:]) if attempt_errors else "Unknown error."
+    return (
+        TaskResult(
+            env_id=task.env_id,
+            source_hint=task.source_hint,
+            policy=policy,
+            final_mp4=str(final_mp4),
+            final_gif=str(final_gif),
+            frames_written=0,
+            fps=0.0,
+            success=False,
+            attempts_tried=attempts_tried,
+            seed_used=None,
+            skipped=False,
+            error=f"No successful rollout after {attempts_tried} attempts.\n{joined_errors}",
+        ),
+        {},
+    )
+
+
 def main() -> None:
     args = parse_args()
     output_dir: Path = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
-    final_dir = output_dir / "final"
-    final_dir.mkdir(parents=True, exist_ok=True)
 
     checkpoint_map = resolve_latest_checkpoints(args.ckpt_dir)
-    tasks = discover_tasks(args.tasks, args.tasks_from_data_dir, checkpoint_map)
+    tasks = resolve_tasks(args)
     if not tasks:
-        raise RuntimeError("No tasks discovered. Provide --tasks explicitly.")
+        raise RuntimeError("No tasks resolved. Check --tasks or --tasks-csv.")
 
-    results: List[TaskResult] = []
-    plan: List[Tuple[str, str]] = []
-    for env_id in tasks:
-        try:
-            policy = choose_policy(env_id, checkpoint_map, args.policy_preference)
-            plan.append((env_id, policy))
-        except ValueError as exc:
-            print(f"[skip] {env_id}: {exc}")
-            results.append(
-                TaskResult(
-                    env_id=env_id,
-                    policy="unresolved",
-                    final_video=str((final_dir / f"{env_id.replace('/', '_')}.mp4")),
-                    frames_written=0,
-                    fps=0.0,
-                    success=False,
-                    skipped=True,
-                    error=str(exc),
-                )
-            )
+    plan: List[Tuple[TaskSpec, List[str]]] = []
+    for task in tasks:
+        candidates = policy_candidates(
+            env_id=task.env_id,
+            source_hint=task.source_hint,
+            checkpoint_map=checkpoint_map,
+            policy_preference=args.policy_preference,
+        )
+        plan.append((task, candidates))
 
     print("Planned tasks:")
-    for env_id, policy in plan:
-        if policy == "ppo":
-            ckpt = checkpoint_map[env_id]
-            print(f"  - {env_id}: PPO ({ckpt})")
+    for task, candidates in plan:
+        if not candidates:
+            print(
+                f"  - {task.env_id}: no policy (source={task.source_hint}, "
+                f"has_motion={has_motion_policy(task.env_id)}, has_ppo={task.env_id in checkpoint_map})"
+            )
         else:
-            print(f"  - {env_id}: motion_planning")
+            print(f"  - {task.env_id}: {', '.join(candidates)} (source={task.source_hint})")
 
     if args.dry_run:
         print("\nDry-run mode: no rollouts executed.")
         return
 
-    for env_id, policy in plan:
-        safe_name = env_id.replace("/", "_")
-        final_video_path = final_dir / f"{safe_name}.mp4"
+    results: List[TaskResult] = []
+    metadata_dir = output_dir / "metadata"
+    metadata_dir.mkdir(parents=True, exist_ok=True)
 
-        if final_video_path.exists() and not args.overwrite:
-            print(f"[skip] {env_id}: {final_video_path} already exists")
+    for task, candidates in plan:
+        if not candidates:
             results.append(
                 TaskResult(
-                    env_id=env_id,
-                    policy=policy,
-                    final_video=str(final_video_path),
+                    env_id=task.env_id,
+                    source_hint=task.source_hint,
+                    policy="unresolved",
+                    final_mp4=str((output_dir / "final" / f"{task.env_id.replace('/', '_')}.mp4")),
+                    final_gif=str((output_dir / "final" / f"{task.env_id.replace('/', '_')}.gif")),
                     frames_written=0,
                     fps=0.0,
                     success=False,
-                    skipped=True,
+                    attempts_tried=0,
+                    seed_used=None,
+                    error="No available policy (neither motion-planning script nor PPO checkpoint found).",
                 )
             )
+            print(f"[error] {task.env_id}: no available policy.")
             continue
 
-        print(f"[run] {env_id} ({policy})")
-        try:
-            if policy == "motion_planning":
-                if args.keep_intermediate:
-                    run_dir = output_dir / "intermediate" / safe_name / "motion"
-                    if run_dir.exists() and args.overwrite:
-                        shutil.rmtree(run_dir)
-                    run_dir.mkdir(parents=True, exist_ok=True)
-                    streams = run_motion_planning_episode(
-                        env_id=env_id,
-                        seed=int(args.seed),
-                        run_dir=run_dir,
+        task_done = False
+        last_failure_result: Optional[TaskResult] = None
+        for policy in candidates:
+            print(f"[run] {task.env_id} with {policy} (up to {args.max_attempts_per_task} attempts)")
+            result, source_meta = try_export_successful_episode(
+                task=task,
+                policy=policy,
+                args=args,
+                checkpoint_map=checkpoint_map,
+                output_dir=output_dir,
+            )
+
+            if result.skipped:
+                print(f"[skip] {task.env_id}: media already exists and --overwrite is not set.")
+                results.append(result)
+                task_done = True
+                break
+
+            if result.error is None and result.success:
+                meta_path = metadata_dir / f"{task.env_id.replace('/', '_')}.json"
+                with open(meta_path, "w", encoding="utf-8") as f:
+                    json.dump(
+                        {
+                            "env_id": task.env_id,
+                            "source_hint": task.source_hint,
+                            "policy": policy,
+                            "final_mp4": result.final_mp4,
+                            "final_gif": result.final_gif,
+                            "frames_written": result.frames_written,
+                            "fps": result.fps,
+                            "success": result.success,
+                            "attempts_tried": result.attempts_tried,
+                            "seed_used": result.seed_used,
+                            "source_meta": source_meta,
+                        },
+                        f,
+                        ensure_ascii=False,
+                        indent=2,
                     )
-                else:
-                    with tempfile.TemporaryDirectory(prefix=f"demo_{safe_name}_") as td:
-                        streams = run_motion_planning_episode(
-                            env_id=env_id,
-                            seed=int(args.seed),
-                            run_dir=Path(td),
-                        )
-            else:
-                ckpt = checkpoint_map.get(env_id)
-                if ckpt is None:
-                    raise ValueError(f"PPO checkpoint not found for {env_id}")
-                streams = run_ppo_episode(
-                    env_id=env_id,
-                    checkpoint_path=ckpt,
-                    seed=int(args.seed),
-                    sim_backend=args.sim_backend,
-                    ppo_max_steps=args.ppo_max_steps,
+                print(
+                    f"[ok] {task.env_id}: {result.final_mp4}, {result.final_gif} "
+                    f"(frames={result.frames_written}, fps={result.fps:.2f}, seed={result.seed_used})"
                 )
+                results.append(result)
+                task_done = True
+                break
 
-            composed_frames = compose_frames(
-                general_frames=streams.general_frames,
-                top_frames=streams.top_frames,
-                wrist_frames=streams.wrist_frames,
+            print(f"[warn] {task.env_id} via {policy} failed:\n{result.error}")
+            last_failure_result = result
+
+        if not task_done:
+            last_err = (
+                last_failure_result.error
+                if last_failure_result is not None and last_failure_result.error is not None
+                else "All candidate policies failed."
             )
-            write_mp4_frames(final_video_path, composed_frames, fps=streams.fps)
-
-            task_meta_path = output_dir / "metadata" / f"{safe_name}.json"
-            task_meta_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(task_meta_path, "w", encoding="utf-8") as f:
-                json.dump(
-                    {
-                        "env_id": env_id,
-                        "policy": policy,
-                        "final_video": str(final_video_path),
-                        "frames_written": len(composed_frames),
-                        "fps": float(streams.fps),
-                        "success": bool(streams.success),
-                        "source_meta": streams.source_meta,
-                    },
-                    f,
-                    ensure_ascii=False,
-                    indent=2,
-                )
-
-            print(
-                f"[ok] {env_id}: {final_video_path} "
-                f"(frames={len(composed_frames)}, fps={streams.fps:.2f}, success={streams.success})"
+            last_attempts = (
+                last_failure_result.attempts_tried
+                if last_failure_result is not None
+                else int(args.max_attempts_per_task)
             )
             results.append(
                 TaskResult(
-                    env_id=env_id,
-                    policy=policy,
-                    final_video=str(final_video_path),
-                    frames_written=len(composed_frames),
-                    fps=float(streams.fps),
-                    success=bool(streams.success),
-                )
-            )
-        except Exception as exc:  # noqa: BLE001
-            print(f"[error] {env_id}: {exc}")
-            results.append(
-                TaskResult(
-                    env_id=env_id,
-                    policy=policy,
-                    final_video=str(final_video_path),
+                    env_id=task.env_id,
+                    source_hint=task.source_hint,
+                    policy=",".join(candidates),
+                    final_mp4=str((output_dir / "final" / f"{task.env_id.replace('/', '_')}.mp4")),
+                    final_gif=str((output_dir / "final" / f"{task.env_id.replace('/', '_')}.gif")),
                     frames_written=0,
                     fps=0.0,
                     success=False,
-                    error=str(exc),
+                    attempts_tried=last_attempts,
+                    seed_used=None,
+                    error=last_err,
                 )
             )
+            print(f"[error] {task.env_id}: all candidate policies failed.")
 
     summary_path = output_dir / "summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:
