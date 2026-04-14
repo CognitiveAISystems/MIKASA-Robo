@@ -1,7 +1,7 @@
-from collections import defaultdict
 import os
 import random
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Optional
 
@@ -11,35 +11,48 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
+from colorama import Fore, Style
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
-from colorama import Fore, Style
 
 if os.path.exists("wandb_config.yaml"):
     import yaml
+
     with open("wandb_config.yaml") as f:
         wandb_config = yaml.load(f, Loader=yaml.FullLoader)
-    os.environ['WANDB_API_KEY'] = wandb_config['wandb_api']
+    os.environ["WANDB_API_KEY"] = wandb_config["wandb_api"]
 
-import mani_skill.envs
 from mani_skill.utils import gym_utils
-
 from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
 from mani_skill.utils.wrappers.record import RecordEpisode
 from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
-from mikasa_robo_suite.memory_envs import *
-from mikasa_robo_suite.utils.wrappers import *
+# Backward-compatible imports across package layouts.
+# Legacy layout expected top-level `mikasa_robo_suite.memory_envs` and
+# `mikasa_robo_suite.utils.wrappers`. New layout keeps modules under `rl/` and `vla/`.
+try:  # legacy
+    from mikasa_robo_suite.memory_envs import *  # type: ignore  # noqa: F401,F403
+    from mikasa_robo_suite.utils.wrappers import *  # type: ignore  # noqa: F401,F403
+except ModuleNotFoundError:
+    # Preserve PPO baseline behavior on classic task set.
+    from mikasa_robo_suite.rl.memory_envs import *  # noqa: F401,F403
+    from mikasa_robo_suite.rl.utils.wrappers import *  # noqa: F401,F403
+
+    # Also register VLA env ids when available.
+    try:
+        from mikasa_robo_suite.vla.memory_envs import *  # noqa: F401,F403
+    except ModuleNotFoundError:
+        pass
 
 
-import copy
+import warnings
 from typing import Dict
+
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common
 from tqdm import tqdm
 
-import warnings
-warnings.filterwarnings('ignore', message='.*env\\.\\w+ to get variables from other wrappers is deprecated.*')
+warnings.filterwarnings("ignore", message=".*env\\.\\w+ to get variables from other wrappers is deprecated.*")
 
 
 class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
@@ -69,8 +82,8 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         ret = dict()
 
         if self.include_rgb or self.include_depth:
-            ret['oracle_info'] = observation['oracle_info']
-            ret['prompt'] = observation['prompt']
+            ret["oracle_info"] = observation["oracle_info"]
+            ret["prompt"] = observation["prompt"]
             sensor_data = observation.pop("sensor_data")
 
             del observation["sensor_param"]
@@ -92,24 +105,22 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 observation = observation
         else:
             if not self.include_joints:
-                filtered_obs = {k: v for k, v in observation.items() if k not in ['prompt', 'oracle_info']}
+                filtered_obs = {k: v for k, v in observation.items() if k not in ["prompt", "oracle_info"]}
             else:
                 # Create extra_agent dict with 'extra' and 'agent' keys
                 extra_agent = {}
-                for key in ['extra', 'agent']:
+                for key in ["extra", "agent"]:
                     if key in observation:
                         extra_agent[key] = observation.pop(key)
 
                 # Flatten the extra_agent dict
                 extra_agent_flat = common.flatten_state_dict(extra_agent, use_torch=True, device=self.base_env.device)
-                ret['joints'] = extra_agent_flat
+                ret["joints"] = extra_agent_flat
 
-                filtered_obs = {k: v for k, v in observation.items() if k not in ['prompt', 'oracle_info', 'extra']}
+                filtered_obs = {k: v for k, v in observation.items() if k not in ["prompt", "oracle_info", "extra"]}
 
-            observation = common.flatten_state_dict(
-                filtered_obs, use_torch=True, device=self.base_env.device
-            )
-        
+            observation = common.flatten_state_dict(filtered_obs, use_torch=True, device=self.base_env.device)
+
         if self.include_state and not (self.include_rgb or self.include_depth):
             ret = observation
         else:
@@ -121,21 +132,20 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         elif self.include_depth and not self.include_rgb:
             ret["depth"] = images
 
+        if "state" in ret.keys() and not self.include_state:
+            ret.pop("state")
 
-        if 'state' in ret.keys() and not self.include_state:
-            ret.pop('state')
+        if "oracle_info" in ret.keys() and not self.include_oracle and ret["oracle_info"] is not None:
+            ret.pop("oracle_info")
 
-        if 'oracle_info' in ret.keys() and not self.include_oracle and ret['oracle_info'] is not None:
-            ret.pop('oracle_info')
+        if "oracle_info" in ret.keys() and (ret["oracle_info"] == 4242424242).any().item():
+            ret.pop("oracle_info")
 
-        if 'oracle_info' in ret.keys() and (ret['oracle_info'] == 4242424242).any().item():
-            ret.pop('oracle_info')
+        if "prompt" in ret.keys() and (ret["prompt"] == 4242424242).any().item():
+            ret.pop("prompt")
 
-        if 'prompt' in ret.keys() and (ret['prompt'] == 4242424242).any().item():
-            ret.pop('prompt')
-
-        if 'joints' in ret.keys() and not self.include_joints:
-            ret.pop('joints')
+        if "joints" in ret.keys() and not self.include_joints:
+            ret.pop("joints")
 
         return ret
 
@@ -176,11 +186,11 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 1024 # 512 | *256
+    num_envs: int = 1024  # 512 | *256
     """the number of parallel environments"""
     num_eval_envs: int = 16
     """the number of parallel evaluation environments"""
-    partial_reset: bool = False # True
+    partial_reset: bool = False  # True
     """whether to let parallel environments reset upon termination instead of truncation"""
     eval_partial_reset: bool = False
     """whether to let parallel evaluation environments reset upon termination instead of truncation"""
@@ -194,19 +204,19 @@ class Args:
     """for benchmarking purposes we want to reconfigure the eval environment each reset to ensure objects are randomized in some tasks"""
     anneal_lr: bool = False
     """Toggle learning rate annealing for policy and value networks"""
-    gamma: float = 0.99 # ! 0.8 ! 
+    gamma: float = 0.99  # ! 0.8 !
     """the discount factor gamma"""
-    gae_lambda: float = 0.95 # ! 0.9 !
+    gae_lambda: float = 0.95  # ! 0.9 !
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 32 # 32 | *8
+    num_minibatches: int = 32  # 32 | *8
     """the number of mini-batches"""
-    update_epochs: int = 4 # 4 | *8
+    update_epochs: int = 4  # 4 | *8
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
     clip_coef: float = 0.2
     """the surrogate clipping coefficient"""
-    clip_vloss: bool = False # ! False !
+    clip_vloss: bool = False  # ! False !
     """Toggles whether or not to use a clipped loss for the value function, as per the paper."""
     ent_coef: float = 0.0
     """coefficient of the entropy"""
@@ -232,7 +242,6 @@ class Args:
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
 
-
     include_oracle: bool = False
     """if toggled, oracle info (such as cup_with_ball_number in ShellGamePush-v0) will be used during the training, i.e. reducing memory task to MDP"""
     noop_steps: int = 1
@@ -241,20 +250,22 @@ class Args:
     """if toggled, rgb images will be included in the observation space"""
     include_joints: bool = False
     """[works only with include_rgb=True] if toggled, joints will be included in the observation space"""
-    reward_mode: str = 'normalized_dense' # sparse | normalized_dense
+    reward_mode: str = "normalized_dense"  # sparse | normalized_dense
     """the mode of the reward function"""
+
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
-def print_tensor_shapes(d, prefix=''):
+
+def print_tensor_shapes(d, prefix=""):
     for k, v in d.items():
         if isinstance(v, dict):
-            print_tensor_shapes(v, prefix=f'{prefix}{k}.')
+            print_tensor_shapes(v, prefix=f"{prefix}{k}.")
         elif isinstance(v, torch.Tensor):
-            print(f'{prefix}{k}: {v.shape}')
+            print(f"{prefix}{k}: {v.shape}")
 
 
 class DictArray(object):
@@ -277,9 +288,7 @@ class DictArray(object):
     def __getitem__(self, index):
         if isinstance(index, str):
             return self.data[index]
-        return {
-            k: v[index] for k, v in self.data.items()
-        }
+        return {k: v[index] for k, v in self.data.items()}
 
     def __setitem__(self, index, value):
         if isinstance(index, str):
@@ -294,13 +303,14 @@ class DictArray(object):
     def reshape(self, shape):
         t = len(self.buffer_shape)
         new_dict = {}
-        for k,v in self.data.items():
+        for k, v in self.data.items():
             if isinstance(v, DictArray):
                 new_dict[k] = v.reshape(shape)
             else:
                 new_dict[k] = v.reshape(shape + v.shape[t:])
-        new_buffer_shape = next(iter(new_dict.values())).shape[:len(shape)]
+        new_buffer_shape = next(iter(new_dict.values())).shape[: len(shape)]
         return DictArray(new_buffer_shape, None, data_dict=new_dict)
+
 
 class NatureCNN(nn.Module):
     def __init__(self, sample_obs):
@@ -315,9 +325,9 @@ class NatureCNN(nn.Module):
         self.out_features = 0
         feature_size = 256
 
-        self.list_of_obs_keys = list(sample_obs.keys()) # 'oracle_info', 'prompt', 'state', 'rgb'
+        self.list_of_obs_keys = list(sample_obs.keys())  # 'oracle_info', 'prompt', 'state', 'rgb'
 
-        if 'rgb' in self.list_of_obs_keys:
+        if "rgb" in self.list_of_obs_keys:
             in_channels = sample_obs["rgb"].shape[-1]
             image_size = (sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
 
@@ -331,44 +341,34 @@ class NatureCNN(nn.Module):
                     padding=0,
                 ),
                 nn.ReLU(),
-                nn.Conv2d(
-                    in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0
-                ),
+                nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0),
                 nn.ReLU(),
-                nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0
-                ),
+                nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0),
                 nn.ReLU(),
                 nn.Flatten(),
             )
 
             # to easily figure out the dimensions after flattening, we pass a test tensor
             with torch.no_grad():
-                n_flatten = cnn(sample_obs["rgb"].float().permute(0,3,1,2).cpu()).shape[1]
+                n_flatten = cnn(sample_obs["rgb"].float().permute(0, 3, 1, 2).cpu()).shape[1]
                 fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
             extractors["rgb"] = nn.Sequential(cnn, fc)
             self.out_features += feature_size
 
         for key in self.list_of_obs_keys:
-            if key in ['oracle_info', 'prompt']:
-                extractors[key] =  nn.Sequential(
-                    nn.Linear(sample_obs[key].shape[-1], 64),
-                    nn.ReLU()
-                )
+            if key in ["oracle_info", "prompt"]:
+                extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 64), nn.ReLU())
                 self.out_features += 64
-            elif key == 'joints':
-                extractors[key] =  nn.Sequential(
-                    nn.Linear(sample_obs[key].shape[-1], 128),
-                    nn.ReLU()
-                )
+            elif key == "joints":
+                extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 128), nn.ReLU())
                 self.out_features += 128
 
-        print(f'{sample_obs.keys()=}')
+        print(f"{sample_obs.keys()=}")
         print_tensor_shapes(sample_obs)
-        print('\n')
+        print("\n")
 
         # for state data we simply pass it through a single linear layer
-        if 'state' in sample_obs.keys():
+        if "state" in sample_obs.keys():
             state_size = sample_obs["state"].shape[-1]
             extractors["state"] = nn.Linear(state_size, 256)
             self.out_features += 256
@@ -380,14 +380,15 @@ class NatureCNN(nn.Module):
         # self.extractors contain nn.Modules that do all the processing.
         for key, extractor in self.extractors.items():
             obs = observations[key]
-            if key == "rgb" and 'rgb' in self.list_of_obs_keys:
-                obs = obs.float().permute(0,3,1,2) # (N, H, W, C) -> (N, C, H, W)
+            if key == "rgb" and "rgb" in self.list_of_obs_keys:
+                obs = obs.float().permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
                 obs = obs / 255
-            elif key in ['oracle_info', 'prompt', 'joints']:
+            elif key in ["oracle_info", "prompt", "joints"]:
                 obs = obs.float()
 
             encoded_tensor_list.append(extractor(obs))
         return torch.cat(encoded_tensor_list, dim=1)
+
 
 class Agent(nn.Module):
     def __init__(self, envs, sample_obs):
@@ -403,14 +404,17 @@ class Agent(nn.Module):
         self.actor_mean = nn.Sequential(
             layer_init(nn.Linear(latent_size, 512)),
             nn.ReLU(inplace=True),
-            layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01*np.sqrt(2)),
+            layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01 * np.sqrt(2)),
         )
         self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)
+
     def get_features(self, x):
         return self.feature_net(x)
+
     def get_value(self, x):
         x = self.feature_net(x)
         return self.critic(x)
+
     def get_action(self, x, deterministic=False):
         x = self.feature_net(x)
         action_mean = self.actor_mean(x)
@@ -420,6 +424,7 @@ class Agent(nn.Module):
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         return probs.sample()
+
     def get_action_and_value(self, x, action=None):
         x = self.feature_net(x)
         action_mean = self.actor_mean(x)
@@ -430,21 +435,21 @@ class Agent(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
+
 class AgentStateOnly(nn.Module):
     def __init__(self, envs):
         super().__init__()
 
         self.list_of_obs_keys = list(envs.single_observation_space.keys())
         print(f"{self.list_of_obs_keys=}")
-        
+
         length = 0
         for key in self.list_of_obs_keys:
             l_ = np.array(envs.single_observation_space[key].shape).prod()
-            print(f'{key}: {l_}')
+            print(f"{key}: {l_}")
             length += l_
-        
-        print(f'Total length: {length}')
 
+        print(f"Total length: {length}")
 
         self.critic = nn.Sequential(
             layer_init(nn.Linear(length, 256)),
@@ -462,12 +467,12 @@ class AgentStateOnly(nn.Module):
             nn.Tanh(),
             layer_init(nn.Linear(256, 256)),
             nn.Tanh(),
-            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01*np.sqrt(2)),
+            layer_init(nn.Linear(256, np.prod(envs.single_action_space.shape)), std=0.01 * np.sqrt(2)),
         )
         self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.single_action_space.shape)) * -0.5)
 
-        print(f'{envs.single_observation_space=}')
-    
+        print(f"{envs.single_observation_space=}")
+
     def add_prompt_to_state(self, x):
         # Concatenate all observation tensors in order of self.list_of_obs_keys
         tensors = [x[key] for key in self.list_of_obs_keys]
@@ -476,7 +481,7 @@ class AgentStateOnly(nn.Module):
     def get_value(self, x):
         x = self.add_prompt_to_state(x)
         return self.critic(x)
-    
+
     def get_action(self, x, deterministic=False):
         x = self.add_prompt_to_state(x)
         action_mean = self.actor_mean(x)
@@ -486,6 +491,7 @@ class AgentStateOnly(nn.Module):
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         return probs.sample()
+
     def get_action_and_value(self, x, action=None):
         x = self.add_prompt_to_state(x)
         action_mean = self.actor_mean(x)
@@ -495,17 +501,21 @@ class AgentStateOnly(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
-    
+
+
 class Logger:
     def __init__(self, log_wandb=False, tensorboard: SummaryWriter = None) -> None:
         self.writer = tensorboard
         self.log_wandb = log_wandb
+
     def add_scalar(self, tag, scalar_value, step):
         if self.log_wandb:
             wandb.log({tag: scalar_value}, step=step)
         self.writer.add_scalar(tag, scalar_value, step)
+
     def close(self):
         self.writer.close()
+
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
@@ -513,60 +523,70 @@ if __name__ == "__main__":
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
 
-    TIME = time.strftime('%Y%m%d_%H%M%S')
+    TIME = time.strftime("%Y%m%d_%H%M%S")
 
-    if args.env_id in ['ShellGamePush-v0', 'ShellGamePick-v0', 'ShellGameTouch-v0']:
+    if args.env_id in ["ShellGamePush-v0", "ShellGamePick-v0", "ShellGameTouch-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (RenderStepInfoWrapper, {}),
             (ShellGameRenderCupInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = 'cup_with_ball_number'
+        oracle_info = "cup_with_ball_number"
         prompt_info = None
-    elif args.env_id in ['InterceptSlow-v0', 'InterceptMedium-v0', 'InterceptFast-v0', 
-                         'InterceptGrabSlow-v0', 'InterceptGrabMedium-v0', 'InterceptGrabFast-v0']:
+    elif args.env_id in [
+        "InterceptSlow-v0",
+        "InterceptMedium-v0",
+        "InterceptFast-v0",
+        "InterceptGrabSlow-v0",
+        "InterceptGrabMedium-v0",
+        "InterceptGrabFast-v0",
+    ]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['RotateLenientPos-v0', 'RotateLenientPosNeg-v0',
-                         'RotateStrictPos-v0', 'RotateStrictPosNeg-v0']:
+    elif args.env_id in [
+        "RotateLenientPos-v0",
+        "RotateLenientPosNeg-v0",
+        "RotateStrictPos-v0",
+        "RotateStrictPosNeg-v0",
+    ]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
             (RotateRenderAngleInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = 'angle_diff'
-        prompt_info = 'target_angle'
-    elif args.env_id in ['CameraShutdownPush-v0', 'CameraShutdownPick-v0']:
+        oracle_info = "angle_diff"
+        prompt_info = "target_angle"
+    elif args.env_id in ["CameraShutdownPush-v0", "CameraShutdownPick-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
-            (CameraShutdownWrapper, {"n_initial_steps": 19}), # camera works only for t ~ [0, 19]
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
+            (CameraShutdownWrapper, {"n_initial_steps": 19}),  # camera works only for t ~ [0, 19]
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['TakeItBack-v0']:
+    elif args.env_id in ["TakeItBack-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['RememberColor3-v0', 'RememberColor5-v0', 'RememberColor9-v0']:
+    elif args.env_id in ["RememberColor3-v0", "RememberColor5-v0", "RememberColor9-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (RememberColorInfoWrapper, {}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
@@ -574,9 +594,9 @@ if __name__ == "__main__":
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['RememberShape3-v0', 'RememberShape5-v0', 'RememberShape9-v0']:
+    elif args.env_id in ["RememberShape3-v0", "RememberShape5-v0", "RememberShape9-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (RememberShapeInfoWrapper, {}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
@@ -584,9 +604,9 @@ if __name__ == "__main__":
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['RememberShapeAndColor3x2-v0', 'RememberShapeAndColor3x3-v0', 'RememberShapeAndColor5x3-v0']:
+    elif args.env_id in ["RememberShapeAndColor3x2-v0", "RememberShapeAndColor3x3-v0", "RememberShapeAndColor5x3-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (RememberShapeAndColorInfoWrapper, {}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
@@ -594,9 +614,9 @@ if __name__ == "__main__":
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['BunchOfColors3-v0', 'BunchOfColors5-v0', 'BunchOfColors7-v0']:
+    elif args.env_id in ["BunchOfColors3-v0", "BunchOfColors5-v0", "BunchOfColors7-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (MemoryCapacityInfoWrapper, {}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
@@ -604,9 +624,9 @@ if __name__ == "__main__":
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['SeqOfColors3-v0', 'SeqOfColors5-v0', 'SeqOfColors7-v0']:
+    elif args.env_id in ["SeqOfColors3-v0", "SeqOfColors5-v0", "SeqOfColors7-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (MemoryCapacityInfoWrapper, {}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
@@ -614,9 +634,9 @@ if __name__ == "__main__":
         ]
         oracle_info = None
         prompt_info = None
-    elif args.env_id in ['ChainOfColors3-v0', 'ChainOfColors5-v0', 'ChainOfColors7-v0']:
+    elif args.env_id in ["ChainOfColors3-v0", "ChainOfColors5-v0", "ChainOfColors7-v0"]:
         wrappers_list = [
-            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps-1}),
+            (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
             (MemoryCapacityInfoWrapper, {}),
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
@@ -627,64 +647,74 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Unknown environment: {args.env_id}")
 
-    print('\n' + '='*75)
-    print('║' + ' '*24 + 'Environment Configuration' + ' '*24 + '║')
-    print('='*75)
-    print('║' + f' Environment ID: {args.env_id}'.ljust(73) + '║')
-    print('║' + f' Oracle Info:    {oracle_info}'.ljust(73) + '║')
-    print('║ Wrappers:'.ljust(74) + '║')
+    print("\n" + "=" * 75)
+    print("║" + " " * 24 + "Environment Configuration" + " " * 24 + "║")
+    print("=" * 75)
+    print("║" + f" Environment ID: {args.env_id}".ljust(73) + "║")
+    print("║" + f" Oracle Info:    {oracle_info}".ljust(73) + "║")
+    print("║ Wrappers:".ljust(74) + "║")
     for wrapper, kwargs in wrappers_list:
-        print('║    ├─ ' + wrapper.__name__.ljust(65) + '║')
+        print("║    ├─ " + wrapper.__name__.ljust(65) + "║")
         if kwargs:
-            print('║    │  └─ ' + str(kwargs).ljust(65) + '║')
-    print('║' + '-'*73 + '║')
-    
-    state_msg = 'state will be used' if args.include_state else 'state will not be used'
-    print('║' + f' include_state:       {str(args.include_state):<5} │ {state_msg}'.ljust(68) + '║')
-    
-    rgb_msg = 'rgb images will be used' if args.include_rgb else 'rgb images will not be used'
-    print('║' + f' include_rgb:         {str(args.include_rgb):<5} │ {rgb_msg}'.ljust(68) + '║')
-    
-    oracle_msg = 'oracle info will be used' if args.include_oracle else 'oracle info will not be used'
-    print('║' + f' include_oracle:      {str(args.include_oracle):<5} │ {oracle_msg}'.ljust(68) + '║')
-    
-    joints_msg = 'joints will be used' if args.include_joints else 'joints will not be used'
-    print('║' + f' include_joints:      {str(args.include_joints):<5} │ {joints_msg}'.ljust(68) + '║')
-    print('='*75 + '\n')
+            print("║    │  └─ " + str(kwargs).ljust(65) + "║")
+    print("║" + "-" * 73 + "║")
+
+    state_msg = "state will be used" if args.include_state else "state will not be used"
+    print("║" + f" include_state:       {str(args.include_state):<5} │ {state_msg}".ljust(68) + "║")
+
+    rgb_msg = "rgb images will be used" if args.include_rgb else "rgb images will not be used"
+    print("║" + f" include_rgb:         {str(args.include_rgb):<5} │ {rgb_msg}".ljust(68) + "║")
+
+    oracle_msg = "oracle info will be used" if args.include_oracle else "oracle info will not be used"
+    print("║" + f" include_oracle:      {str(args.include_oracle):<5} │ {oracle_msg}".ljust(68) + "║")
+
+    joints_msg = "joints will be used" if args.include_joints else "joints will not be used"
+    print("║" + f" include_joints:      {str(args.include_joints):<5} │ {joints_msg}".ljust(68) + "║")
+    print("=" * 75 + "\n")
 
     assert any([args.include_state, args.include_rgb]), "At least one of include_state or include_rgb must be True."
-    assert not (args.include_joints and not args.include_rgb), "include_joints can only be True when include_rgb is True"
+    assert not (args.include_joints and not args.include_rgb), (
+        "include_joints can only be True when include_rgb is True"
+    )
 
     if args.include_state and not args.include_rgb and not args.include_oracle and not args.include_joints:
-        MODE = 'state'
+        MODE = "state"
     elif args.include_state and args.include_rgb and not args.include_oracle and not args.include_joints:
-        raise NotImplementedError("state_rgb is not implemented and does not make sense, since any environment can be solved only by using state")
-        MODE = 'state_rgb'
+        raise NotImplementedError(
+            "state_rgb is not implemented and does not make sense, since any environment can be solved only by using state"
+        )
+        MODE = "state_rgb"
     elif args.include_state and not args.include_rgb and args.include_oracle and not args.include_joints:
-        raise NotImplementedError("state_oracle is not implemented and does not make sense, since the state already contains oracle information")
-        MODE = 'state_oracle'
+        raise NotImplementedError(
+            "state_oracle is not implemented and does not make sense, since the state already contains oracle information"
+        )
+        MODE = "state_oracle"
     elif args.include_state and args.include_rgb and args.include_oracle and not args.include_joints:
-        raise NotImplementedError("state_rgb_oracle is not implemented and does not make sense, since any environment can be solved only by using state")
-        MODE = 'state_rgb_oracle'
+        raise NotImplementedError(
+            "state_rgb_oracle is not implemented and does not make sense, since any environment can be solved only by using state"
+        )
+        MODE = "state_rgb_oracle"
     elif not args.include_state and args.include_rgb and not args.include_oracle and not args.include_joints:
-        MODE = 'rgb'
+        MODE = "rgb"
     elif not args.include_state and args.include_rgb and args.include_oracle and not args.include_joints:
-        MODE = 'rgb_oracle'
+        MODE = "rgb_oracle"
     elif not args.include_state and args.include_rgb and args.include_joints and args.include_oracle:
-        MODE = 'rgb_joints_oracle' # TODO: check if this is correct
+        MODE = "rgb_joints_oracle"  # TODO: check if this is correct
     elif not args.include_state and args.include_rgb and args.include_joints and not args.include_oracle:
-        MODE = 'rgb_joints'
+        MODE = "rgb_joints"
     else:
-        raise NotImplementedError(f"Unknown mode: {args.include_state=} {args.include_rgb=} {args.include_oracle=} {args.include_joints=}")
-    
-    SAVE_DIR = f'checkpoints/ppo_memtasks/{MODE}/{args.reward_mode}/{args.env_id}'
+        raise NotImplementedError(
+            f"Unknown mode: {args.include_state=} {args.include_rgb=} {args.include_oracle=} {args.include_joints=}"
+        )
 
+    SAVE_DIR = f"checkpoints/ppo_memtasks/{MODE}/{args.reward_mode}/{args.env_id}"
 
-    print(f'{MODE=}')
-    print(f'{prompt_info=}')
+    print(f"{MODE=}")
+    print(f"{prompt_info=}")
 
-    wrappers_list.insert(0, (StateOnlyTensorToDictWrapper, {})) # obs=torch.tensor -> dict with keys: state: obs, prompt: prompt, oracle_info: oracle_info
-
+    wrappers_list.insert(
+        0, (StateOnlyTensorToDictWrapper, {})
+    )  # obs=torch.tensor -> dict with keys: state: obs, prompt: prompt, oracle_info: oracle_info
 
     if args.exp_name is None:
         args.exp_name = os.path.basename(__file__)[: -len(".py")]
@@ -692,7 +722,7 @@ if __name__ == "__main__":
     else:
         # run_name = args.exp_name
         run_name = f"{args.exp_name}__{args.seed}__{MODE}__{TIME}"
-        
+
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -702,22 +732,53 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    if MODE not in ['state', 'state_oracle']:
-        env_kwargs = dict(obs_mode="rgb", control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu", reward_mode=args.reward_mode)
+    if MODE not in ["state", "state_oracle"]:
+        env_kwargs = dict(
+            obs_mode="rgb",
+            control_mode="pd_joint_delta_pos",
+            render_mode=args.render_mode,
+            sim_backend="gpu",
+            reward_mode=args.reward_mode,
+        )
     else:
-        env_kwargs = dict(obs_mode="state", control_mode="pd_joint_delta_pos", render_mode=args.render_mode, sim_backend="gpu", reward_mode=args.reward_mode) # render_mode="rgb_array",
+        env_kwargs = dict(
+            obs_mode="state",
+            control_mode="pd_joint_delta_pos",
+            render_mode=args.render_mode,
+            sim_backend="gpu",
+            reward_mode=args.reward_mode,
+        )  # render_mode="rgb_array",
 
-    eval_envs = gym.make(args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq,  **env_kwargs) # , reconfigure_freq=args.eval_reconfiguration_freq
-    envs = gym.make(args.env_id, num_envs=args.num_envs if not args.evaluate else 1, reconfiguration_freq=args.reconfiguration_freq, **env_kwargs)
+    eval_envs = gym.make(
+        args.env_id, num_envs=args.num_eval_envs, reconfiguration_freq=args.eval_reconfiguration_freq, **env_kwargs
+    )  # , reconfigure_freq=args.eval_reconfiguration_freq
+    envs = gym.make(
+        args.env_id,
+        num_envs=args.num_envs if not args.evaluate else 1,
+        reconfiguration_freq=args.reconfiguration_freq,
+        **env_kwargs,
+    )
 
     for wrapper_class, wrapper_kwargs in wrappers_list:
         eval_envs = wrapper_class(eval_envs, **wrapper_kwargs)
         envs = wrapper_class(envs, **wrapper_kwargs)
 
-    envs = FlattenRGBDObservationWrapper(envs, rgb=args.include_rgb, depth=False, state=args.include_state, 
-                                         oracle=args.include_oracle, joints=args.include_joints)
-    eval_envs = FlattenRGBDObservationWrapper(eval_envs, rgb=args.include_rgb, depth=False, state=args.include_state, 
-                                              oracle=args.include_oracle, joints=args.include_joints)
+    envs = FlattenRGBDObservationWrapper(
+        envs,
+        rgb=args.include_rgb,
+        depth=False,
+        state=args.include_state,
+        oracle=args.include_oracle,
+        joints=args.include_joints,
+    )
+    eval_envs = FlattenRGBDObservationWrapper(
+        eval_envs,
+        rgb=args.include_rgb,
+        depth=False,
+        state=args.include_state,
+        oracle=args.include_oracle,
+        joints=args.include_joints,
+    )
 
     if isinstance(envs.action_space, gym.spaces.Dict):
         envs = FlattenActionSpaceWrapper(envs)
@@ -728,25 +789,54 @@ if __name__ == "__main__":
             eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
         print(f"Saving eval videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
-            save_video_trigger = lambda x : (x // args.num_steps) % args.save_train_video_freq == 0
-            envs = RecordEpisode(envs, output_dir=f"{SAVE_DIR}/{run_name}/{TIME}/train_videos", save_trajectory=False, save_video_trigger=save_video_trigger, max_steps_per_video=args.num_steps, video_fps=30)
-        eval_envs = RecordEpisode(eval_envs, output_dir=eval_output_dir, save_trajectory=args.evaluate, trajectory_name="trajectory", max_steps_per_video=args.num_eval_steps, video_fps=30)
+            save_video_trigger = lambda x: (x // args.num_steps) % args.save_train_video_freq == 0
+            envs = RecordEpisode(
+                envs,
+                output_dir=f"{SAVE_DIR}/{run_name}/{TIME}/train_videos",
+                save_trajectory=False,
+                save_video_trigger=save_video_trigger,
+                max_steps_per_video=args.num_steps,
+                video_fps=30,
+            )
+        eval_envs = RecordEpisode(
+            eval_envs,
+            output_dir=eval_output_dir,
+            save_trajectory=args.evaluate,
+            trajectory_name="trajectory",
+            max_steps_per_video=args.num_eval_steps,
+            video_fps=30,
+        )
     envs = ManiSkillVectorEnv(envs, args.num_envs, ignore_terminations=not args.partial_reset, record_metrics=True)
-    eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True)
+    eval_envs = ManiSkillVectorEnv(
+        eval_envs, args.num_eval_envs, ignore_terminations=not args.eval_partial_reset, record_metrics=True
+    )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     max_episode_steps = gym_utils.find_max_episode_steps_value(envs._env)
-    print('='*70)
+    print("=" * 70)
     print(f"Max Episode Steps: {max_episode_steps}")
-    print('='*70 + '\n')
+    print("=" * 70 + "\n")
     logger = None
     if not args.evaluate:
         print("Running training")
         if args.track:
             import wandb
+
             config = vars(args)
-            config["env_cfg"] = dict(**env_kwargs, num_envs=args.num_envs, env_id=args.env_id, env_horizon=max_episode_steps, partial_reset=args.partial_reset)
-            config["eval_env_cfg"] = dict(**env_kwargs, num_envs=args.num_eval_envs, env_id=args.env_id, env_horizon=max_episode_steps, partial_reset=args.partial_reset)
+            config["env_cfg"] = dict(
+                **env_kwargs,
+                num_envs=args.num_envs,
+                env_id=args.env_id,
+                env_horizon=max_episode_steps,
+                partial_reset=args.partial_reset,
+            )
+            config["eval_env_cfg"] = dict(
+                **env_kwargs,
+                num_envs=args.num_eval_envs,
+                env_id=args.env_id,
+                env_horizon=max_episode_steps,
+                partial_reset=args.partial_reset,
+            )
             wandb.init(
                 project=args.wandb_project_name,
                 entity=args.wandb_entity,
@@ -755,7 +845,7 @@ if __name__ == "__main__":
                 name=run_name,
                 save_code=True,
                 group="PPO",
-                tags=["ppo", "walltime_efficient"]
+                tags=["ppo", "walltime_efficient"],
             )
         writer = SummaryWriter(f"{SAVE_DIR}/{run_name}/{TIME}")
         writer.add_text(
@@ -783,12 +873,16 @@ if __name__ == "__main__":
     eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
     video_iteration = 0
 
-    print(f"\n####")
-    print(f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}")
-    print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
-    print(f"####\n")
+    print("\n####")
+    print(
+        f"args.num_iterations={args.num_iterations} args.num_envs={args.num_envs} args.num_eval_envs={args.num_eval_envs}"
+    )
+    print(
+        f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}"
+    )
+    print("####\n")
 
-    if MODE not in ['state', 'state_oracle']:
+    if MODE not in ["state", "state_oracle"]:
         agent = Agent(envs, sample_obs=next_obs).to(device)
     else:
         agent = AgentStateOnly(envs).to(device)
@@ -809,7 +903,9 @@ if __name__ == "__main__":
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_obs, deterministic=True))
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(
+                        agent.get_action(eval_obs, deterministic=True)
+                    )
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -820,7 +916,9 @@ if __name__ == "__main__":
                 mean = torch.stack(v).float().mean()
                 if logger is not None:
                     logger.add_scalar(f"eval/{k}", mean, global_step)
-                print(f"{Fore.GREEN}Evaluation Metric: {k}{Style.RESET_ALL} | {Fore.CYAN}Mean: {mean:.4f}{Style.RESET_ALL}")
+                print(
+                    f"{Fore.GREEN}Evaluation Metric: {k}{Style.RESET_ALL} | {Fore.CYAN}Mean: {mean:.4f}{Style.RESET_ALL}"
+                )
             if args.evaluate:
                 break
         if args.save_model and iteration % args.eval_freq == 1:
@@ -833,7 +931,7 @@ if __name__ == "__main__":
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
-            
+
         rollout_time = time.time()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
@@ -860,7 +958,9 @@ if __name__ == "__main__":
                 for k in infos["final_observation"]:
                     infos["final_observation"][k] = infos["final_observation"][k][done_mask]
                 with torch.no_grad():
-                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(infos["final_observation"]).view(-1)
+                    final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(
+                        infos["final_observation"]
+                    ).view(-1)
         rollout_time = time.time() - rollout_time
 
         # bootstrap value according to termination and truncation
@@ -886,10 +986,10 @@ if __name__ == "__main__":
                     lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}
                     We then normalize it by the sum of the lambda^i (instead of 1-lambda)
                     """
-                    if t == args.num_steps - 1: # initialize
-                        lam_coef_sum = 0.
-                        reward_term_sum = 0. # the sum of the second term
-                        value_term_sum = 0. # the sum of the third term
+                    if t == args.num_steps - 1:  # initialize
+                        lam_coef_sum = 0.0
+                        reward_term_sum = 0.0  # the sum of the second term
+                        value_term_sum = 0.0  # the sum of the third term
                     lam_coef_sum = lam_coef_sum * next_not_done
                     reward_term_sum = reward_term_sum * next_not_done
                     value_term_sum = value_term_sum * next_not_done
@@ -901,7 +1001,9 @@ if __name__ == "__main__":
                     advantages[t] = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
                 else:
                     delta = rewards[t] + args.gamma * real_next_values - values[t]
-                    advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
+                    advantages[t] = lastgaelam = (
+                        delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam
+                    )  # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
             returns = advantages + values
 
         # flatten the batch
@@ -1001,5 +1103,5 @@ if __name__ == "__main__":
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
-    if logger is not None: 
+    if logger is not None:
         logger.close()

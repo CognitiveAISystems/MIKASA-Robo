@@ -335,13 +335,13 @@ Once you download / trained oracle agents checkpoints, you can build datasets of
 # For single task:
 python3 mikasa_robo_suite/dataset_collectors/get_mikasa_robo_datasets.py \
     --env-id=ShellGameTouch-v0 \
-    --path-to-save-data="data" \
+    --path-to-save-data="data_mikasa_robo" \
     --ckpt-dir="." \
     --num-train-data=1000
 
 # For all tasks:
 python3 mikasa_robo_suite/dataset_collectors/parallel_dataset_collection_manager.py \
-    --path-to-save-data="data" \
+    --path-to-save-data="data_mikasa_robo" \
     --ckpt-dir="." \
     --num-train-data=1000
 ```

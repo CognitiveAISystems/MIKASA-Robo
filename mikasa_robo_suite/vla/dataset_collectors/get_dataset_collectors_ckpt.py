@@ -1,3 +1,689 @@
+# ! List of environments
+"""
+1. ShellGameTouch-v0
+2. ShellGamePush-v0
+3. ShellGamePick-v0
+4. InterceptSlow-v0
+5. InterceptMedium-v0
+6. InterceptFast-v0
+7. InterceptGrabSlow-v0
+8. InterceptGrabMedium-v0
+9. InterceptGrabFast-v0
+10. RotateLenientPos-v0
+11. RotateLenientPosNeg-v0
+12. RotateStrictPos-v0
+13. RotateStrictPosNeg-v0
+14. TakeItBack-v0
+15. RememberColor3-v0
+16. RememberColor5-v0
+17. RememberColor9-v0
+18. RememberShape3-v0
+19. RememberShape5-v0
+20. RememberShape9-v0
+21. RememberShapeAndColor3x2-v0
+22. RememberShapeAndColor3x3-v0
+23. RememberShapeAndColor5x3-v0
+24. BunchOfColors3-v0
+25. BunchOfColors5-v0
+26. BunchOfColors7-v0
+27. SeqOfColors3-v0
+28. SeqOfColors5-v0
+29. SeqOfColors7-v0
+30. ChainOfColors3-v0
+31. ChainOfColors5-v0
+32. ChainOfColors7-v0
+33. BlinkCountButtonPress-VLA-v0
+34. ShellGameShuffleColorLampTouch-VLA-v0
+35. ShellGameColorLampTouch-VLA-v0
+"""
+
+ENVS_CONFIG = {
+    # * id: [env_id, success_once_threshold, parameters]
+    0: [
+        "ShellGameTouch-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-shell-game-touch-v0",
+            "num_steps": 90,
+            "num_eval_steps": 90,
+        },
+    ],
+    1: [
+        "ShellGamePush-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-shell-game-push-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    2: [
+        "ShellGamePick-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-shell-game-pick-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    3: [
+        "InterceptSlow-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-intercept-slow-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    4: [
+        "InterceptMedium-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-intercept-medium-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    5: [
+        "InterceptFast-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-intercept-fast-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    6: [
+        "InterceptGrabSlow-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-intercept-grab-slow-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    7: [
+        "InterceptGrabMedium-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-intercept-grab-medium-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    8: [
+        "InterceptGrabFast-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-intercept-grab-fast-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    9: [
+        "RotateLenientPos-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-rotate-lenient-pos-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    10: [
+        "RotateLenientPosNeg-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-rotate-lenient-pos-neg-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    11: [
+        "RotateStrictPos-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-rotate-strict-pos-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    12: [
+        "RotateStrictPosNeg-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-rotate-strict-pos-neg-v0", "num_steps": 90, "num_eval_steps": 90},
+    ],
+    13: [
+        "TakeItBack-v0",
+        0.95,
+        {"exp_name": "ppo-mlp-state-dense-take-it-back-v0", "num_steps": 180, "num_eval_steps": 180},
+    ],
+    14: [
+        "RememberColor3-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-color-3-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    15: [
+        "RememberColor5-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-color-5-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    16: [
+        "RememberColor9-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-color-9-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    17: [
+        "RememberShape3-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-3-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    18: [
+        "RememberShape5-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-5-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    19: [
+        "RememberShape9-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-9-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    20: [
+        "RememberShapeAndColor3x2-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-3x2-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    21: [
+        "RememberShapeAndColor3x3-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-3x3-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    22: [
+        "RememberShapeAndColor5x3-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-5x3-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    23: [
+        "BunchOfColors3-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-bunch-of-colors-3-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    24: [
+        "BunchOfColors5-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-bunch-of-colors-5-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    25: [
+        "BunchOfColors7-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-bunch-of-colors-7-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    26: [
+        "SeqOfColors3-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-seq-of-colors-3-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    27: [
+        "SeqOfColors5-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-seq-of-colors-5-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    28: [
+        "SeqOfColors7-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-seq-of-colors-7-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    29: [
+        "ChainOfColors3-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-chain-of-colors-3-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    30: [
+        "ChainOfColors5-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-chain-of-colors-5-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    31: [
+        "ChainOfColors7-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-chain-of-colors-7-v0",
+            "num_steps": 120,
+            "num_eval_steps": 120,
+            "gae_lambda": 0.95,
+            "gamma": 0.9,
+        },
+    ],
+    # ******* NEW *******
+    32: [
+        "RememberColor3-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-color-3-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    33: [
+        "RememberColor5-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-color-5-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    34: [
+        "RememberColor9-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-color-9-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    35: [
+        "RememberShape3-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-3-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    36: [
+        "RememberShape5-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-5-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    37: [
+        "RememberShape9-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-9-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    38: [
+        "RememberShapeAndColor3x2-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-3x2-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    39: [
+        "RememberShapeAndColor3x3-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-3x3-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    40: [
+        "RememberShapeAndColor5x3-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-remember-shape-and-color-5x3-vla-v0",
+            "num_steps": 25,
+            "num_eval_steps": 25,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    41: [
+        "ShellGameTouch-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-shell-game-touch-vla-v0",
+            "num_steps": 30,
+            "num_eval_steps": 30,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    42: [
+        "ShellGamePick-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-shell-game-pick-vla-v0",
+            "num_steps": 30,
+            "num_eval_steps": 30,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    43: [
+        "ShellGamePush-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-shell-game-push-vla-v0",
+            "num_steps": 30,
+            "num_eval_steps": 30,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    44: [
+        "InterceptSlow-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-intercept-slow-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    45: [
+        "InterceptMedium-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-intercept-medium-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    46: [
+        "InterceptFast-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-intercept-fast-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    47: [
+        "InterceptGrabSlow-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-intercept-grab-slow-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    48: [
+        "InterceptGrabMedium-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-intercept-grab-medium-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    49: [
+        "InterceptGrabFast-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-intercept-grab-fast-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    50: [
+        "RotateLenientPos-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-rotate-lenient-pos-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    51: [
+        "RotateLenientPosNeg-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-rotate-lenient-pos-neg-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    52: [
+        "RotateStrictPos-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-vla-v0",
+            "num_steps": 90,
+            "num_eval_steps": 90,
+        },
+    ],
+    53: [
+        "RotateStrictPosNeg-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-rotate-strict-pos-neg-vla-v0",
+            "num_steps": 90,
+            "num_eval_steps": 90,
+        },
+    ],
+    54: [
+        "TakeItBack-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-take-it-back-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+        },
+    ],
+    55: [
+        "SeqOfColors3-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-seq-of-colors-3-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    56: [
+        "SeqOfColors5-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-seq-of-colors-5-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    57: [
+        "SeqOfColors7-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-seq-of-colors-7-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    58: [
+        "ChainOfColors3-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-chain-of-colors-3-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    59: [
+        "ChainOfColors5-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-chain-of-colors-5-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    60: [
+        "ChainOfColors7-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-chain-of-colors-7-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    61: [
+        "BunchOfColors3-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-bunch-of-colors-3-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    62: [
+        "BunchOfColors5-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-bunch-of-colors-5-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    63: [
+        "BunchOfColors7-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-bunch-of-colors-7-vla-v0",
+            "num_steps": 100,
+            "num_eval_steps": 100,
+        },
+    ],
+    64: [
+        "ShellGameShuffleTouch-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-shell-game-shuffle-touch-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    65: [
+        "BlinkCountButtonPress-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-blink-count-button-press-vla-v0",
+            "num_steps": 180,
+            "num_eval_steps": 180,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    66: [
+        "ShellGameShuffleColorLampTouch-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-shell-game-shuffle-color-lamp-touch-vla-v0",
+            "num_steps": 60,
+            "num_eval_steps": 60,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+    67: [
+        "ShellGameColorLampTouch-VLA-v0",
+        0.95,
+        {
+            "exp_name": "ppo-mlp-state-dense-shell-game-color-lamp-touch-vla-v0",
+            "num_steps": 30,
+            "num_eval_steps": 30,
+            "gae_lambda": 0.9,
+            "gamma": 0.8,
+        },
+    ],
+}
+
+
+def get_env_config(env_id):
+    """
+    Get environment configuration by env_id.
+
+    Now instead of config = ENVS_CONFIG[0]
+    we use config = get_env_config(env_id)
+    """
+    for config in ENVS_CONFIG.values():
+        if config[0] == env_id:
+            return config
+    raise ValueError(f"Environment {env_id} not found in ENVS_CONFIG")
+
+
 import os
 import random
 import time
@@ -22,38 +708,28 @@ if os.path.exists("wandb_config.yaml"):
         wandb_config = yaml.load(f, Loader=yaml.FullLoader)
     os.environ["WANDB_API_KEY"] = wandb_config["wandb_api"]
 
-# ManiSkill specific imports
-from mani_skill.utils import gym_utils
-from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
-from mani_skill.utils.wrappers.record import RecordEpisode
-from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
-
-# Backward-compatible imports across package layouts.
-# Legacy layout expected top-level `mikasa_robo_suite.memory_envs` and
-# `mikasa_robo_suite.utils.wrappers`. New layout keeps modules under `rl/` and `vla/`.
-try:  # legacy
-    from mikasa_robo_suite.memory_envs import *  # type: ignore  # noqa: F401,F403
-    from mikasa_robo_suite.utils.wrappers import *  # type: ignore  # noqa: F401,F403
-except ModuleNotFoundError:
-    # Preserve PPO baseline behavior on classic task set.
-    from mikasa_robo_suite.rl.memory_envs import *  # noqa: F401,F403
-    from mikasa_robo_suite.rl.utils.wrappers import *  # noqa: F401,F403
-
-    # Also register VLA env ids when available.
-    try:
-        from mikasa_robo_suite.vla.memory_envs import *  # noqa: F401,F403
-    except ModuleNotFoundError:
-        pass
-
-
+import sys
 import warnings
 from typing import Dict
 
 from mani_skill.envs.sapien_env import BaseEnv
-from mani_skill.utils import common
+from mani_skill.utils import common, gym_utils
+from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
+from mani_skill.utils.wrappers.record import RecordEpisode
+from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 from tqdm import tqdm
 
+import mikasa_robo_suite.vla.memory_envs  # noqa: F401
+from mikasa_robo_suite.vla.utils.wrappers import *
+
 warnings.filterwarnings("ignore", message=".*env\\.\\w+ to get variables from other wrappers is deprecated.*")
+
+# from baselines.ppo.ppo_memtasks import *
+
+from dataclasses import asdict
+from pprint import pprint
+
+# pprint(self.config, indent=2, width=80)
 
 
 class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
@@ -80,7 +756,6 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         self.base_env.update_obs_space(new_obs)
 
     def observation(self, observation: Dict):
-        # Save oracle_info if it exists
         ret = dict()
 
         if self.include_rgb or self.include_depth:
@@ -255,13 +930,6 @@ class Args:
     reward_mode: str = "normalized_dense"  # sparse | normalized_dense
     """the mode of the reward function"""
 
-    lstm_hidden_size: int = 512
-    """the hidden size of the LSTM"""
-    lstm_num_layers: int = 1
-    """the number of layers in the LSTM"""
-    lstm_dropout: float = 0.0
-    """the dropout rate of the LSTM"""
-
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -369,8 +1037,8 @@ class NatureCNN(nn.Module):
                 extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 64), nn.ReLU())
                 self.out_features += 64
             elif key == "joints":
-                extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 256), nn.ReLU())
-                self.out_features += 256
+                extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 128), nn.ReLU())
+                self.out_features += 128
 
         print(f"{sample_obs.keys()=}")
         print_tensor_shapes(sample_obs)
@@ -391,7 +1059,7 @@ class NatureCNN(nn.Module):
             obs = observations[key]
             if key == "rgb" and "rgb" in self.list_of_obs_keys:
                 obs = obs.float().permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
-                obs = obs / 255.0
+                obs = obs / 255
             elif key in ["oracle_info", "prompt", "joints"]:
                 obs = obs.float()
 
@@ -405,80 +1073,44 @@ class Agent(nn.Module):
         self.feature_net = NatureCNN(sample_obs=sample_obs)
         # latent_size = np.array(envs.unwrapped.single_observation_space.shape).prod()
         latent_size = self.feature_net.out_features
-
-        self.lstm_hidden_size = args.lstm_hidden_size
-        self.lstm = nn.LSTM(
-            latent_size, self.lstm_hidden_size, args.lstm_num_layers, dropout=args.lstm_dropout, batch_first=False
-        )
-
-        for name, param in self.lstm.named_parameters():
-            if "bias" in name:
-                nn.init.constant_(param, 0.0)
-            elif "weight" in name:
-                nn.init.orthogonal_(param, 1.0)
-
-        print("#" * 50)
-        print(f"{latent_size=}")
-        print(f"{self.lstm.hidden_size=}")
-        print("#" * 50)
-        print("\n")
-
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(self.lstm_hidden_size, 512)),
+            layer_init(nn.Linear(latent_size, 512)),
             nn.ReLU(inplace=True),
             layer_init(nn.Linear(512, 1)),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(self.lstm_hidden_size, 512)),
+            layer_init(nn.Linear(latent_size, 512)),
             nn.ReLU(inplace=True),
             layer_init(nn.Linear(512, np.prod(envs.unwrapped.single_action_space.shape)), std=0.01 * np.sqrt(2)),
         )
         self.actor_logstd = nn.Parameter(torch.ones(1, np.prod(envs.unwrapped.single_action_space.shape)) * -0.5)
 
-    def get_states(self, x, lstm_state, done):
-        hidden = self.feature_net(x).unsqueeze(0)
-        batch_size = lstm_state[0].shape[1]
-        hidden = hidden.reshape((-1, batch_size, self.lstm.input_size))
-        done = done.reshape((-1, batch_size))
-        new_hidden = []
-        for h, d in zip(hidden, done):
-            d = d.float()
-            h_ = (1.0 - d).view(1, -1, 1) * lstm_state[0]
-            c_ = (1.0 - d).view(1, -1, 1) * lstm_state[1]
-            h, lstm_state = self.lstm(h.unsqueeze(0), (h_, c_))
+    def get_features(self, x):
+        return self.feature_net(x)
 
-            new_hidden += [h]
+    def get_value(self, x):
+        x = self.feature_net(x)
+        return self.critic(x)
 
-        new_hidden = torch.flatten(torch.cat(new_hidden), 0, 1)
-
-        return new_hidden, lstm_state
-
-    def get_value(self, x, lstm_state, done):
-        hidden, _ = self.get_states(x, lstm_state, done)
-
-        return self.critic(hidden)
-
-    def get_action(self, x, lstm_state, done, deterministic=False):
-        hidden, lstm_state = self.get_states(x, lstm_state, done)
-        action_mean = self.actor_mean(hidden)
+    def get_action(self, x, deterministic=False):
+        x = self.feature_net(x)
+        action_mean = self.actor_mean(x)
         if deterministic:
-            return action_mean, lstm_state
+            return action_mean
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
+        return probs.sample()
 
-        return probs.sample(), lstm_state
-
-    def get_action_and_value(self, x, lstm_state, done, action=None):
-        hidden, lstm_state = self.get_states(x, lstm_state, done)
-        action_mean = self.actor_mean(hidden)
+    def get_action_and_value(self, x, action=None):
+        x = self.feature_net(x)
+        action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
-
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(hidden), lstm_state
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
 class AgentStateOnly(nn.Module):
@@ -564,9 +1196,31 @@ class Logger:
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+
+    # Get pre-defined environment configuration
+    env_oracle_config = get_env_config(args.env_id)
+    env_params = env_oracle_config[2]  # get dict of parameters
+    success_once_threshold = env_oracle_config[1]
+
+    for param_name, param_value in env_params.items():
+        if hasattr(args, param_name):
+            setattr(args, param_name, param_value)
+
+    args.wandb_project_name = "MIKASA-Robo-dataset-collectors"
+    args.seed = 123
+    args.include_state = True
+    args.track = True
+    args.capture_video = True
+    args.save_model = True
+    args.total_timesteps = 150_000_000
+
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
+
+    print("\nConfiguration:")
+    pprint(asdict(args), indent=2, width=80)
+    print("\n")
 
     TIME = time.strftime("%Y%m%d_%H%M%S")
 
@@ -689,6 +1343,139 @@ if __name__ == "__main__":
         ]
         oracle_info = None
         prompt_info = None
+
+    # ******* NEW *******
+    elif args.env_id in ["RememberColor3-VLA-v0", "RememberColor5-VLA-v0", "RememberColor9-VLA-v0"]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (RememberColorInfoWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = None
+        prompt_info = None
+    elif args.env_id in ["RememberShape3-VLA-v0", "RememberShape5-VLA-v0", "RememberShape9-VLA-v0"]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (RememberShapeInfoWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = None
+        prompt_info = None
+    elif args.env_id in [
+        "RememberShapeAndColor3x2-VLA-v0",
+        "RememberShapeAndColor3x3-VLA-v0",
+        "RememberShapeAndColor5x3-VLA-v0",
+    ]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (RememberShapeAndColorInfoWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = None
+        prompt_info = None
+    elif args.env_id in ["ShellGameShuffleTouch-VLA-v0"]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (ShellGameRenderCupInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = "cup_with_ball_number"
+        prompt_info = None
+    elif args.env_id in ["BlinkCountButtonPress-VLA-v0"]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (RenderPressProgressInfoWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = "target_blinks"
+        prompt_info = None
+    elif args.env_id in ["ShellGameTouch-VLA-v0", "ShellGamePick-VLA-v0", "ShellGamePush-VLA-v0"]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (ShellGameRenderCupInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = "cup_with_ball_number"
+        prompt_info = None
+    elif args.env_id in ["ShellGameShuffleColorLampTouch-VLA-v0", "ShellGameColorLampTouch-VLA-v0"]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (ShellGameRenderCupInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = "oracle_info"
+        prompt_info = "prompt"
+    elif args.env_id in [
+        "InterceptSlow-VLA-v0",
+        "InterceptMedium-VLA-v0",
+        "InterceptFast-VLA-v0",
+        "InterceptGrabSlow-VLA-v0",
+        "InterceptGrabMedium-VLA-v0",
+        "InterceptGrabFast-VLA-v0",
+    ]:
+        wrappers_list = [
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = None
+        prompt_info = None
+    elif args.env_id in [
+        "RotateLenientPos-VLA-v0",
+        "RotateLenientPosNeg-VLA-v0",
+        "RotateStrictPos-VLA-v0",
+        "RotateStrictPosNeg-VLA-v0",
+    ]:
+        wrappers_list = [
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (RotateRenderAngleInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = "angle_diff"
+        prompt_info = "target_angle"
+    elif args.env_id in ["TakeItBack-VLA-v0"]:
+        wrappers_list = [
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = None
+        prompt_info = None
+    elif args.env_id in [
+        "SeqOfColors3-VLA-v0",
+        "SeqOfColors5-VLA-v0",
+        "SeqOfColors7-VLA-v0",
+        "ChainOfColors3-VLA-v0",
+        "ChainOfColors5-VLA-v0",
+        "ChainOfColors7-VLA-v0",
+        "BunchOfColors3-VLA-v0",
+        "BunchOfColors5-VLA-v0",
+        "BunchOfColors7-VLA-v0",
+    ]:
+        wrappers_list = [
+            (CurriculumPhaseNoopActionWrapper, {}),
+            (MemoryCapacityInfoWrapper, {}),
+            (RenderStepInfoWrapper, {}),
+            (RenderRewardInfoWrapper, {}),
+            (DebugRewardWrapper, {}),
+        ]
+        oracle_info = None
+        prompt_info = None
     else:
         raise ValueError(f"Unknown environment: {args.env_id}")
 
@@ -752,10 +1539,7 @@ if __name__ == "__main__":
             f"Unknown mode: {args.include_state=} {args.include_rgb=} {args.include_oracle=} {args.include_joints=}"
         )
 
-    SAVE_DIR = f"checkpoints/ppo_memtasks/{MODE}/{args.reward_mode}/{args.env_id}"
-
-    if "state" in MODE:
-        raise NotImplementedError("state mode is not implemented with LSTM model, use rgb mode instead")
+    SAVE_DIR = f"oracle_checkpoints/ppo_memtasks/{MODE}/{args.reward_mode}/{args.env_id}"
 
     print(f"{MODE=}")
     print(f"{prompt_info=}")
@@ -768,6 +1552,7 @@ if __name__ == "__main__":
         args.exp_name = os.path.basename(__file__)[: -len(".py")]
         run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{MODE}__{TIME}"
     else:
+        # run_name = args.exp_name
         run_name = f"{args.exp_name}__{args.seed}__{MODE}__{TIME}"
 
     # TRY NOT TO MODIFY: seeding
@@ -782,7 +1567,7 @@ if __name__ == "__main__":
     if MODE not in ["state", "state_oracle"]:
         env_kwargs = dict(
             obs_mode="rgb",
-            control_mode="pd_joint_delta_pos",
+            control_mode="pd_ee_delta_pose",
             render_mode=args.render_mode,
             sim_backend="gpu",
             reward_mode=args.reward_mode,
@@ -790,7 +1575,7 @@ if __name__ == "__main__":
     else:
         env_kwargs = dict(
             obs_mode="state",
-            control_mode="pd_joint_delta_pos",
+            control_mode="pd_ee_delta_pose",
             render_mode=args.render_mode,
             sim_backend="gpu",
             reward_mode=args.reward_mode,
@@ -810,7 +1595,6 @@ if __name__ == "__main__":
         eval_envs = wrapper_class(eval_envs, **wrapper_kwargs)
         envs = wrapper_class(envs, **wrapper_kwargs)
 
-    # rgbd obs mode returns a dict of data, we flatten it so there is just a rgbd key and state key
     envs = FlattenRGBDObservationWrapper(
         envs,
         rgb=args.include_rgb,
@@ -918,7 +1702,6 @@ if __name__ == "__main__":
     next_obs, _ = envs.reset(seed=args.seed)
     eval_obs, _ = eval_envs.reset(seed=args.seed)
     next_done = torch.zeros(args.num_envs, device=device)
-    next_done_eval = torch.zeros(args.num_eval_envs, device=device)
     eps_returns = torch.zeros(args.num_envs, dtype=torch.float, device=device)
     video_iteration = 0
 
@@ -941,35 +1724,50 @@ if __name__ == "__main__":
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
 
-    initial_lstm_state = (
-        torch.zeros(agent.lstm.num_layers, args.num_envs, agent.lstm.hidden_size).to(device),
-        torch.zeros(agent.lstm.num_layers, args.num_envs, agent.lstm.hidden_size).to(device),
-    )  # hidden and cell states (see https://youtu.be/8HyCNIVRbSU)
+    delayed_early_stop_env_ids = {
+        "RememberColor3-VLA-v0",
+        "RememberColor5-VLA-v0",
+        "RememberColor9-VLA-v0",
+        "RememberShape3-VLA-v0",
+        "RememberShape5-VLA-v0",
+        "RememberShape9-VLA-v0",
+        "RememberShapeAndColor3x2-VLA-v0",
+        "RememberShapeAndColor3x3-VLA-v0",
+        "RememberShapeAndColor5x3-VLA-v0",
+        "SeqOfColors3-VLA-v0",
+        "SeqOfColors5-VLA-v0",
+        "SeqOfColors7-VLA-v0",
+        "ChainOfColors3-VLA-v0",
+        "ChainOfColors5-VLA-v0",
+        "ChainOfColors7-VLA-v0",
+        "BunchOfColors3-VLA-v0",
+        "BunchOfColors5-VLA-v0",
+        "BunchOfColors7-VLA-v0",
+        "ShellGameShuffleTouch-VLA-v0",
+        "BlinkCountButtonPress-VLA-v0",
+        "InterceptSlow-VLA-v0",
+        "InterceptMedium-VLA-v0",
+        "InterceptFast-VLA-v0",
+        "InterceptGrabSlow-VLA-v0",
+        "InterceptGrabMedium-VLA-v0",
+        # "InterceptGrabFast-VLA-v0",
+    }
+    post_threshold_evals_remaining = None
 
-    initial_lstm_state_val = (
-        torch.zeros(agent.lstm.num_layers, args.num_eval_envs, agent.lstm.hidden_size).to(device),
-        torch.zeros(agent.lstm.num_layers, args.num_eval_envs, agent.lstm.hidden_size).to(device),
-    )  # hidden and cell states (see https://youtu.be/8HyCNIVRbSU)
-
-    # for iteration in range(1, args.num_iterations + 1):
     for iteration in tqdm(range(1, args.num_iterations + 1), total=args.num_iterations, desc="Training"):
         print(f"Epoch: {iteration}, global_step={global_step}")
-        next_lstm_state = (initial_lstm_state[0].clone(), initial_lstm_state[1].clone())
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
         if iteration % args.eval_freq == 1:
             print("Evaluating")
-            next_lstm_state_val = (initial_lstm_state_val[0].clone(), initial_lstm_state_val[1].clone())
             eval_obs, _ = eval_envs.reset()
             eval_metrics = defaultdict(list)
             num_episodes = 0
             for _ in range(args.num_eval_steps):
                 with torch.no_grad():
-                    act_eval, next_lstm_state_val = agent.get_action(
-                        eval_obs, next_lstm_state_val, next_done_eval, deterministic=True
+                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(
+                        agent.get_action(eval_obs, deterministic=True)
                     )
-                    eval_obs, eval_rew, eval_terminations, eval_truncations, eval_infos = eval_envs.step(act_eval)
-                    next_done_eval = torch.logical_or(eval_terminations, eval_truncations).to(torch.float32)
                     if "final_info" in eval_infos:
                         mask = eval_infos["_final_info"]
                         num_episodes += mask.sum()
@@ -983,13 +1781,65 @@ if __name__ == "__main__":
                 print(
                     f"{Fore.GREEN}Evaluation Metric: {k}{Style.RESET_ALL} | {Fore.CYAN}Mean: {mean:.4f}{Style.RESET_ALL}"
                 )
+
+                # !!!!!!!!!!!!!!!!
+
+                # Check if success_once reached threshold and stop training.
+                if k == "success_once":
+                    should_stop = False
+                    stop_message = None
+
+                    if args.env_id in delayed_early_stop_env_ids:
+                        if post_threshold_evals_remaining is None and mean >= success_once_threshold:
+                            post_threshold_evals_remaining = 3
+                            print(
+                                f"\n{Fore.GREEN}Success rate threshold reached for {args.env_id}. "
+                                f"Continuing training for {post_threshold_evals_remaining} "
+                                f"more validation cycles before stopping.{Style.RESET_ALL}"
+                            )
+                        elif post_threshold_evals_remaining is not None:
+                            post_threshold_evals_remaining -= 1
+                            if post_threshold_evals_remaining > 0:
+                                print(
+                                    f"{Fore.YELLOW}Post-threshold validation cycles remaining: "
+                                    f"{post_threshold_evals_remaining}{Style.RESET_ALL}"
+                                )
+                            else:
+                                should_stop = True
+                                stop_message = (
+                                    f"\n{Fore.GREEN}Completed 3 extra validation cycles after threshold for "
+                                    f"{args.env_id}. Stopping training...{Style.RESET_ALL}"
+                                )
+                    elif mean >= success_once_threshold:
+                        should_stop = True
+                        stop_message = (
+                            f"\n{Fore.GREEN}Success rate threshold reached! Stopping training...{Style.RESET_ALL}"
+                        )
+
+                    if should_stop:
+                        print(stop_message)
+                        # Save final checkpoint
+                        if args.save_model:
+                            model_path = f"{SAVE_DIR}/{run_name}/{TIME}/final_success_ckpt.pt"
+                            torch.save(agent.state_dict(), model_path)
+                            print(f"Final successful model saved to {model_path}")
+                        if logger is not None:
+                            logger.close()
+                            # Add explicit cleanup
+                            envs.close()
+                            eval_envs.close()
+                        sys.exit(0)  # Exit the script with success status
+
+                # !!!!!!!!!!!!!!!!
+
             if args.evaluate:
                 break
-        if args.save_model and iteration % args.eval_freq == 1:
-            model_path = f"{SAVE_DIR}/{run_name}/{TIME}/ckpt_{video_iteration}_{iteration}.pt"
-            video_iteration += 1
-            torch.save(agent.state_dict(), model_path)
-            print(f"model saved to {model_path}")
+
+        # if args.save_model and iteration % args.eval_freq == 1:
+        #     model_path = f"{SAVE_DIR}/{run_name}/{TIME}/ckpt_{video_iteration}_{iteration}.pt"
+        #     video_iteration += 1
+        #     torch.save(agent.state_dict(), model_path)
+        #     print(f"model saved to {model_path}")
 
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -1005,9 +1855,7 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value, next_lstm_state = agent.get_action_and_value(
-                    next_obs, next_lstm_state, next_done
-                )
+                action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -1026,14 +1874,13 @@ if __name__ == "__main__":
                     infos["final_observation"][k] = infos["final_observation"][k][done_mask]
                 with torch.no_grad():
                     final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = agent.get_value(
-                        infos["final_observation"], next_lstm_state, next_done
+                        infos["final_observation"]
                     ).view(-1)
-
         rollout_time = time.time() - rollout_time
 
         # bootstrap value according to termination and truncation
         with torch.no_grad():
-            next_value = agent.get_value(next_obs, next_lstm_state, next_done).reshape(1, -1)
+            next_value = agent.get_value(next_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
@@ -1043,10 +1890,8 @@ if __name__ == "__main__":
                 else:
                     next_not_done = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
-                real_next_values = next_not_done * nextvalues + final_values[t]  # t instead of t+1
-                # next_not_done means nextvalues is computed from the correct next_obs
-                # if next_not_done is 1, final_values is always 0
-                # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
+                real_next_values = next_not_done * nextvalues + final_values[t]
+
                 if args.finite_horizon_gae:
                     """
                     See GAE paper equation(16) line 1, we will compute the GAE based on this line only
@@ -1083,29 +1928,19 @@ if __name__ == "__main__":
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
-        b_dones = dones.reshape(-1)
 
         # Optimizing the policy and value network
-        assert args.num_envs % args.num_minibatches == 0
         agent.train()
-        envsperbatch = args.num_envs // args.num_minibatches
-        envinds = np.arange(args.num_envs)
-        flatinds = np.arange(args.batch_size).reshape(args.num_steps, args.num_envs)
+        b_inds = np.arange(args.batch_size)
         clipfracs = []
         update_time = time.time()
         for epoch in range(args.update_epochs):
-            np.random.shuffle(envinds)
-            for start in range(0, args.num_envs, envsperbatch):
-                end = start + envsperbatch
-                mbenvinds = envinds[start:end]
-                mb_inds = flatinds[:, mbenvinds].ravel()  # be really careful about the index
+            np.random.shuffle(b_inds)
+            for start in range(0, args.batch_size, args.minibatch_size):
+                end = start + args.minibatch_size
+                mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue, _ = agent.get_action_and_value(
-                    b_obs[mb_inds],
-                    (next_lstm_state[0][:, mbenvinds], next_lstm_state[1][:, mbenvinds]),
-                    b_dones[mb_inds],
-                    b_actions[mb_inds],  # TODO .long()?
-                )
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -1174,11 +2009,15 @@ if __name__ == "__main__":
         logger.add_scalar("time/update_time", update_time, global_step)
         logger.add_scalar("time/rollout_time", rollout_time, global_step)
         logger.add_scalar("time/rollout_fps", args.num_envs * args.num_steps / rollout_time, global_step)
+        del mb_advantages, newvalue, ratio, logratio
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     if args.save_model and not args.evaluate:
         model_path = f"{SAVE_DIR}/{run_name}/{TIME}/final_ckpt.pt"
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
+    envs.close()
     if logger is not None:
         logger.close()

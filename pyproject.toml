@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mikasa-robo-suite"
+version = "0.0.5"
+description = "Gym-like memory-intensive environments for robotic tabletop manipulation"
+readme = "README.md"
+requires-python = ">=3.9,<3.12"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Egor Cherepanov", email = "cherepanovegor2018@gmail.com" },
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "setuptools>=69,<81",
+  "gymnasium==0.29.1",
+  "mani_skill==3.0.0b15",
+  "matplotlib==3.9.2",
+  "numpy==1.23.5",
+  "torch==2.2.1",
+  "wandb==0.18.5",
+  "tensorboard>=2.15,<2.16",
+  "colorama==0.4.6",
+  "tqdm",
+  "pandas",
+  "ipywidgets",
+  "opencv-python==4.10.0.84",
+  "nvidia-ml-py>=12.560.30",
+  "gputil",
+  "psutil",
+  "huggingface-hub[cli]>=0.23,<1.0",
+  "ipykernel>=7.0.0a2",
+  "seaborn>=0.13.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/CognitiveAISystems/MIKASA-Robo"
+
+[tool.setuptools.packages.find]
+include = ["mikasa_robo_suite*", "baselines*"]
+
+[tool.uv]
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64' and python_version < '3.12'"]
+prerelease = "allow"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.8",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

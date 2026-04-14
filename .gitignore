@@ -54,11 +54,30 @@ wandb/
 wandb_config.yaml
 !assets/
 !assets/**
-oracle_checkpoints/*
-data/*
+
+# Local data, outputs, checkpoints, IDE/agent prefs (not versioned)
+data_mikasa_robo/
+inspect_out/
+logs/
+oracle_checkpoints/
+data_mikasa_robo_mp/
+
+.claudeignore
+AGENTS.md
+
 .nfs*
 *.zip
 secret.txt
 download_assets.sh
 keep_going.sh
 upload.ipynb
+
+.claude/
+.cursor/
+.codex/
+.ruff_cache
+.uv_cache
+
+# Docs
+docs
+.readthedocs.yaml

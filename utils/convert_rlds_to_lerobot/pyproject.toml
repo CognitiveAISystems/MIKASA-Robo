@@ -1,0 +1,18 @@
+[project]
+name = "mikasa-convert-rlds-to-lerobot"
+version = "0.1.0"
+description = "Convert MIKASA-Robo RLDS task datasets to LeRobotDataset v3 format"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+  "lerobot>=0.4.0",
+  "tensorflow-cpu>=2.15,<2.20",
+  "tensorflow-datasets>=4.9.0",
+  "numpy>=1.24,<3",
+  "tqdm>=4.66.0",
+  "huggingface-hub[cli]>=0.24.0",
+  "matplotlib>=3.10.8",
+  "ipykernel>=7.2.0",
+]
+
+[tool.uv]
+prerelease = "allow"
