@@ -384,7 +384,9 @@ class SeqOfColorsVLABaseEnv(BaseEnv):
                         self.initial_poses[key][env_i] = new_pos
                         current_pose = self.cubes[key].pose.raw_pose.clone()
                         current_pose[env_i, :3] = new_pos
-                        current_pose[env_i, 3:7] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=current_pose.dtype)
+                        current_pose[env_i, 3:7] = torch.tensor(
+                            [1.0, 0.0, 0.0, 0.0], device=self.device, dtype=current_pose.dtype
+                        )
                         self.cubes[key].pose = current_pose
                         lin_vel = self.cubes[key].linear_velocity.clone()
                         ang_vel = self.cubes[key].angular_velocity.clone()
@@ -511,7 +513,9 @@ class SeqOfColorsVLABaseEnv(BaseEnv):
             hidden_shapes_poses[key][mask, :3] = self.original_poses[key][mask, :3]
             if bool(stabilize_mask.any().item()):
                 hidden_shapes_poses[key][stabilize_mask, :3] = self.initial_poses[key][stabilize_mask, :3]
-                hidden_shapes_poses[key][stabilize_mask, 3:7] = torch.tensor([1.0, 0.0, 0.0, 0.0], device=self.device, dtype=hidden_shapes_poses[key].dtype)
+                hidden_shapes_poses[key][stabilize_mask, 3:7] = torch.tensor(
+                    [1.0, 0.0, 0.0, 0.0], device=self.device, dtype=hidden_shapes_poses[key].dtype
+                )
             self.cubes[key].pose = hidden_shapes_poses[key]
             if bool(stabilize_mask.any().item()):
                 lin_vel = self.cubes[key].linear_velocity.clone()

@@ -164,7 +164,8 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
         # ── Target disc (kinematic) ──────────────────────────────────────
         disc_builder = self.scene.create_actor_builder()
         disc_builder.add_cylinder_collision(
-            radius=self.DISC_RADIUS, half_length=self.DISC_HALF_HEIGHT,
+            radius=self.DISC_RADIUS,
+            half_length=self.DISC_HALF_HEIGHT,
         )
         disc_builder.add_cylinder_visual(
             radius=self.DISC_RADIUS,
@@ -174,18 +175,24 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
             ),
         )
         self.disc = _build_by_type(
-            disc_builder, name="target_disc", body_type="kinematic",
+            disc_builder,
+            name="target_disc",
+            body_type="kinematic",
             initial_pose=default_hidden_pose,
         )
         self.disc_quat = torch.tensor(
-            euler2quat(0, np.pi / 2, 0), dtype=torch.float32, device=d,
+            euler2quat(0, np.pi / 2, 0),
+            dtype=torch.float32,
+            device=d,
         )
 
         # ── 3 colored buttons (red / green / blue, kinematic) ────────────
         self.button_bases = []
         self.button_caps = []
         self.button_cap_quat = torch.tensor(
-            euler2quat(0, np.pi / 2, 0), dtype=torch.float32, device=d,
+            euler2quat(0, np.pi / 2, 0),
+            dtype=torch.float32,
+            device=d,
         )
 
         for i, color in enumerate(self.FLASH_COLORS):
@@ -198,8 +205,10 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
                 ),
             )
             base = _build_by_type(
-                base_builder, name=f"btn_base_{i}",
-                body_type="kinematic", initial_pose=default_hidden_pose,
+                base_builder,
+                name=f"btn_base_{i}",
+                body_type="kinematic",
+                initial_pose=default_hidden_pose,
             )
             self.button_bases.append(base)
 
@@ -214,8 +223,10 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
                 material=sapien.render.RenderMaterial(base_color=color),
             )
             cap = _build_by_type(
-                cap_builder, name=f"btn_cap_{i}",
-                body_type="kinematic", initial_pose=default_hidden_pose,
+                cap_builder,
+                name=f"btn_cap_{i}",
+                body_type="kinematic",
+                initial_pose=default_hidden_pose,
             )
             self.button_caps.append(cap)
 
@@ -239,7 +250,10 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
                 bulb_on_color=color,
             )
             shapes._set_actor_visual_rgba(
-                parts["bulb_on"], color, emission_scale=20.0, remove_textures=True,
+                parts["bulb_on"],
+                color,
+                emission_scale=20.0,
+                remove_textures=True,
             )
             self.lamp_bulbs_on.append(parts["bulb_on"])
 
@@ -292,43 +306,46 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
             self.success_flag[env_idx] = False
 
             self.flash_color[env_idx] = torch.randint(
-                0, 3, (b,), device=self.device, dtype=torch.int64,
+                0,
+                3,
+                (b,),
+                device=self.device,
+                dtype=torch.int64,
             )
             # For N_CUBES=1, randint(1, 1, ...) is invalid; clamp upper bound.
             flash_trigger_hi = max(2, self.N_CUBES)
             self.flash_trigger_count[env_idx] = torch.randint(
-                1, flash_trigger_hi, (b,), device=self.device, dtype=torch.int64,
+                1,
+                flash_trigger_hi,
+                (b,),
+                device=self.device,
+                dtype=torch.int64,
             )
             lo, hi = self.FLASH_DURATION_STEPS
             self.flash_duration[env_idx] = torch.randint(
-                lo, hi + 1, (b,), device=self.device, dtype=torch.int64,
+                lo,
+                hi + 1,
+                (b,),
+                device=self.device,
+                dtype=torch.int64,
             )
 
             default_q = torch.tensor(
-                [1.0, 0.0, 0.0, 0.0], device=self.device,
+                [1.0, 0.0, 0.0, 0.0],
+                device=self.device,
             ).repeat(b, 1)
 
             # ── Position disc (far side, farther from robot) ─────────────
             disc_xyz = torch.zeros((b, 3), device=self.device)
-            disc_xyz[:, 0] = (
-                torch.rand(b, device=self.device)
-                * (self.DISC_X_MAX - self.DISC_X_MIN)
-                + self.DISC_X_MIN
-            )
-            disc_xyz[:, 1] = (
-                torch.rand(b, device=self.device)
-                * (self.DISC_Y_MAX - self.DISC_Y_MIN)
-                + self.DISC_Y_MIN
-            )
+            disc_xyz[:, 0] = torch.rand(b, device=self.device) * (self.DISC_X_MAX - self.DISC_X_MIN) + self.DISC_X_MIN
+            disc_xyz[:, 1] = torch.rand(b, device=self.device) * (self.DISC_Y_MAX - self.DISC_Y_MIN) + self.DISC_Y_MIN
             disc_xyz[:, 2] = self.DISC_HALF_HEIGHT
 
             disc_q = self.disc_quat.unsqueeze(0).repeat(b, 1)
             self.disc.set_pose(Pose.create_from_pq(p=disc_xyz, q=disc_q))
             self.disc_xy[env_idx] = disc_xyz[:, :2]
             self.disc_place_pos[env_idx, :2] = disc_xyz[:, :2]
-            self.disc_place_pos[env_idx, 2] = (
-                self.DISC_HALF_HEIGHT * 2 + self.CUBE_HALF_SIZE
-            )
+            self.disc_place_pos[env_idx, 2] = self.DISC_HALF_HEIGHT * 2 + self.CUBE_HALF_SIZE
 
             # ── Position cubes (cluster away from button row) ────────────
             cube_center_x = disc_xyz[:, 0] + self.CUBE_CLUSTER_X_OFFSET
@@ -423,11 +440,12 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
             # ── Reset robot ──────────────────────────────────────────────
             if self.robot_uids in ("panda", "panda_wristcam"):
                 qpos = np.array(
-                    [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3,
-                     np.pi / 4, 0.04, 0.04],
+                    [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04],
                 )
                 qpos[:-2] += self._episode_rng.normal(
-                    0, self.robot_init_qpos_noise, len(qpos) - 2,
+                    0,
+                    self.robot_init_qpos_noise,
+                    len(qpos) - 2,
                 )
                 self.agent.reset(qpos)
                 self.agent.robot.set_root_pose(sapien.Pose([-0.615, 0, 0]))
@@ -448,22 +466,22 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
 
         # ── Cube-on-disc detection (sticky + current) ────────────────────
         current_cubes_on_disc = torch.zeros(
-            (self.num_envs, self.N_CUBES), dtype=torch.bool, device=self.device,
+            (self.num_envs, self.N_CUBES),
+            dtype=torch.bool,
+            device=self.device,
         )
         for i in range(self.N_CUBES):
             cube_pos = self.cubes[i].pose.p
             xy_dist = torch.linalg.norm(
-                cube_pos[:, :2] - self.disc_xy, dim=1,
+                cube_pos[:, :2] - self.disc_xy,
+                dim=1,
             )
             z_on_table = cube_pos[:, 2] < 0.5
             cube_vel = torch.linalg.norm(
-                self.cubes[i].linear_velocity, dim=1,
+                self.cubes[i].linear_velocity,
+                dim=1,
             )
-            on_disc = (
-                (xy_dist < self.DISC_ON_THRESH)
-                & z_on_table
-                & (cube_vel < self.CUBE_VEL_THRESH)
-            )
+            on_disc = (xy_dist < self.DISC_ON_THRESH) & z_on_table & (cube_vel < self.CUBE_VEL_THRESH)
             current_cubes_on_disc[:, i] = on_disc
             self.cubes_on_disc[:, i] = self.cubes_on_disc[:, i] | on_disc
 
@@ -471,19 +489,12 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
         all_on_disc = current_cubes_on_disc.all(dim=1)
 
         # ── Flash triggering ─────────────────────────────────────────────
-        trigger = (
-            (~self.flash_triggered)
-            & (n_on_disc >= self.flash_trigger_count)
-        )
+        trigger = (~self.flash_triggered) & (n_on_disc >= self.flash_trigger_count)
         self.flash_triggered = self.flash_triggered | trigger
         self.flash_start_step[trigger] = elapsed[trigger]
 
         flash_elapsed = elapsed - self.flash_start_step
-        flash_active = (
-            self.flash_triggered
-            & (flash_elapsed >= 0)
-            & (flash_elapsed < self.flash_duration)
-        )
+        flash_active = self.flash_triggered & (flash_elapsed >= 0) & (flash_elapsed < self.flash_duration)
 
         # ── Lamp control ─────────────────────────────────────────────────
         off_pose = self.lamp_bulb_off.pose.raw_pose.clone()
@@ -515,24 +526,19 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
             cap_pose[:, 0:2] = btn_xy
             cap_pose[:, 2] = self.button_cap_unpressed_z - depth
             cap_pose[:, 3:7] = self.button_cap_quat.repeat(
-                cap_pose.shape[0], 1,
+                cap_pose.shape[0],
+                1,
             )
             self.button_caps[btn_idx].pose = cap_pose
 
             # Detect press (only after all cubes placed, first press only)
-            pressed = depth >= (
-                self.BUTTON_CAP_TRAVEL * self.BUTTON_PRESS_EVENT_RATIO
-            )
+            pressed = depth >= (self.BUTTON_CAP_TRAVEL * self.BUTTON_PRESS_EVENT_RATIO)
             new_press = pressed & all_on_disc & (self.pressed_button == -1)
             self.pressed_button[new_press] = btn_idx
 
         # ── Success / failure ────────────────────────────────────────────
         button_pressed_mask = self.pressed_button >= 0
-        correct = (
-            button_pressed_mask
-            & (self.pressed_button == self.flash_color)
-            & all_on_disc
-        )
+        correct = button_pressed_mask & (self.pressed_button == self.flash_color) & all_on_disc
         wrong = button_pressed_mask & (self.pressed_button != self.flash_color)
 
         self.success_flag = self.success_flag | correct
@@ -544,10 +550,14 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
 
         # Move phase: reach toward nearest unplaced cube or disc
         min_dist = torch.full(
-            (self.num_envs,), float("inf"), device=self.device,
+            (self.num_envs,),
+            float("inf"),
+            device=self.device,
         )
         holding_any = torch.zeros(
-            self.num_envs, dtype=torch.bool, device=self.device,
+            self.num_envs,
+            dtype=torch.bool,
+            device=self.device,
         )
 
         for i in range(self.N_CUBES):
@@ -573,11 +583,7 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
 
         # Press phase: target the correct button
         for btn_idx in range(3):
-            btn_mask = (
-                all_on_disc
-                & (self.flash_color == btn_idx)
-                & ~button_pressed_mask
-            )
+            btn_mask = all_on_disc & (self.flash_color == btn_idx) & ~button_pressed_mask
             if btn_mask.any():
                 btn_pos = torch.zeros(self.num_envs, 3, device=self.device)
                 btn_pos[:, :2] = self.buttons_xy[btn_idx]
@@ -678,7 +684,9 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
             depth = torch.clamp(raw_depth, min=0.0, max=self.BUTTON_CAP_TRAVEL)
             depth = depth * (xy_dist < self.BUTTON_PRESS_XY_RADIUS).float()
             depth_norm = torch.clamp(
-                depth / self.BUTTON_CAP_TRAVEL, min=0.0, max=1.0,
+                depth / self.BUTTON_CAP_TRAVEL,
+                min=0.0,
+                max=1.0,
             )
             correct_mask = (self.flash_color == btn_idx) & info["all_on_disc"]
             button_press_reward += correct_mask.float() * depth_norm
@@ -686,18 +694,15 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
         # Smoothness penalty
         if not torch.is_tensor(action):
             action = torch.as_tensor(action, device=self.device)
-        if (
-            not hasattr(self, "_prev_action")
-            or self._prev_action is None
-            or self._prev_action.shape != action.shape
-        ):
+        if not hasattr(self, "_prev_action") or self._prev_action is None or self._prev_action.shape != action.shape:
             self._prev_action = torch.zeros_like(action)
 
         delta_action = action - self._prev_action
         action_l2 = torch.linalg.norm(action, dim=1)
         delta_action_l2 = torch.linalg.norm(delta_action, dim=1)
         qvel_l2 = torch.linalg.norm(
-            self.agent.robot.get_qvel()[..., :-2], dim=1,
+            self.agent.robot.get_qvel()[..., :-2],
+            dim=1,
         )
         smooth_penalty = (
             self.ACTION_L2_COEF * torch.tanh(2.0 * action_l2)
@@ -753,6 +758,7 @@ class GatherAndRecall5VLAEnv(GatherAndRecallVLABaseEnv):
 @register_env("GatherAndRecall7-VLA-v0", max_episode_steps=800)
 class GatherAndRecall7VLAEnv(GatherAndRecallVLABaseEnv):
     N_CUBES = 7
+
 
 @register_env("GatherAndRecall9-VLA-v0", max_episode_steps=1000)
 class GatherAndRecall9VLAEnv(GatherAndRecallVLABaseEnv):

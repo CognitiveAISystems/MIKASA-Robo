@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 import cv2
@@ -413,6 +414,17 @@ class RenderRewardInfoWrapper(gym.Wrapper):
         frame = np.ascontiguousarray(frame)
         if frame.dtype != np.uint8:
             frame = np.clip(frame, 0, 255).astype(np.uint8, copy=False)
+
+        # Used by benchmark-video tooling to keep step/env overlays but suppress reward text.
+        disable_reward_overlay = str(os.getenv("MIKASA_DISABLE_REWARD_OVERLAY", "0")).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "y",
+            "on",
+        }
+        if disable_reward_overlay:
+            return frame
 
         for i in range(len(frame)):
             if self.reward is not None:
@@ -1277,7 +1289,8 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
             cv2.rectangle(img, (x0, y0), (x0 + size, y0 + size), (80, 80, 80), 1)
 
             scale = (size - 20) / (2 * extent * 1.3)
-            to_px = lambda xy: self._to_px(xy, center, scale, x0, y0, size)
+            def to_px(xy):
+                return self._to_px(xy, center, scale, x0, y0, size)
 
             pts = [to_px(waypoints[j]) for j in range(len(waypoints))]
             pts.append(pts[0])

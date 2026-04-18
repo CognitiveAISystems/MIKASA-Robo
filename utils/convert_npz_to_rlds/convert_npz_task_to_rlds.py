@@ -123,7 +123,9 @@ def main() -> None:
         )
 
         if not source_version_dir.exists():
-            raise FileNotFoundError(f"TFDS output version dir not found: {source_version_dir}. tfds build may have failed.")
+            raise FileNotFoundError(
+                f"TFDS output version dir not found: {source_version_dir}. tfds build may have failed."
+            )
 
         if destination_task_dir.exists() and args.overwrite_dest:
             shutil.rmtree(destination_task_dir)

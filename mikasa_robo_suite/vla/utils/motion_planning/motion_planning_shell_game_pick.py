@@ -143,12 +143,18 @@ def parse_args():
     parser.add_argument("--waypoint-stride", type=int, default=2)
 
     # Handle grasp geometry
-    parser.add_argument("--handle-distance", type=float, default=0.12,
-                        help="Distance from mug center to handle grasp point (meters).")
-    parser.add_argument("--pre-approach-distance", type=float, default=0.10,
-                        help="How far out from handle to start the side approach (meters).")
-    parser.add_argument("--grasp-z-offset", type=float, default=0.0,
-                        help="Z offset relative to mug center for handle grasp height.")
+    parser.add_argument(
+        "--handle-distance", type=float, default=0.12, help="Distance from mug center to handle grasp point (meters)."
+    )
+    parser.add_argument(
+        "--pre-approach-distance",
+        type=float,
+        default=0.10,
+        help="How far out from handle to start the side approach (meters).",
+    )
+    parser.add_argument(
+        "--grasp-z-offset", type=float, default=0.0, help="Z offset relative to mug center for handle grasp height."
+    )
     parser.add_argument("--travel-clearance-z", type=float, default=0.25)
     parser.add_argument("--gripper-close-steps", type=int, default=15)
     parser.add_argument("--settle-steps", type=int, default=25)
@@ -171,11 +177,13 @@ def main():
 
     wrappers_list = []
     if bool(args.overlay_info):
-        wrappers_list.extend([
-            (RenderStepInfoWrapper, {}),
-            (RenderRewardInfoWrapper, {}),
-            (DebugRewardWrapper, {}),
-        ])
+        wrappers_list.extend(
+            [
+                (RenderStepInfoWrapper, {}),
+                (RenderRewardInfoWrapper, {}),
+                (DebugRewardWrapper, {}),
+            ]
+        )
 
     env = gym.make(
         env_id,
@@ -367,12 +375,12 @@ def main():
     # The gripper approaches along +X so it doesn't push neighboring mugs.
     pre_dist = float(args.pre_approach_distance)
     pre_x = handle_x - pre_dist  # further back in -X
-    pre_y = handle_y             # same Y — straight-line approach along X
-    pre_z = handle_z             # same height as handle
+    pre_y = handle_y  # same Y — straight-line approach along X
+    pre_z = handle_z  # same height as handle
 
     z_clear = float(args.travel_clearance_z)
 
-    print(f"=== ShellGamePick Oracle MP ===")
+    print("=== ShellGamePick Oracle MP ===")
     print(f"env_id: {env_id}")
     print(f"target_slot: {target_slot} ({'left' if target_slot == 0 else 'center' if target_slot == 1 else 'right'})")
     print(f"mug_center: [{mug_x:.3f}, {mug_y:.3f}, {mug_z:.3f}]")

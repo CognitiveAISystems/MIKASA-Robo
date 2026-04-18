@@ -169,19 +169,22 @@ class TraceShapeVLABaseEnv(BaseEnv):
             bulb_radius=self.LAMP_BULB_RADIUS,
         )
         lp_white = shapes.build_color_switch_lamp(
-            scene=self.scene, name="lamp_white",
+            scene=self.scene,
+            name="lamp_white",
             bulb_off_color=np.array([245, 245, 245, 255]) / 255.0,
             bulb_on_color=np.array([245, 245, 245, 255]) / 255.0,
             **lamp_kw,
         )
         lp_red = shapes.build_color_switch_lamp(
-            scene=self.scene, name="lamp_red",
+            scene=self.scene,
+            name="lamp_red",
             bulb_off_color=np.array([245, 245, 245, 255]) / 255.0,
             bulb_on_color=np.array([255, 0, 0, 255]) / 255.0,
             **lamp_kw,
         )
         lp_green = shapes.build_color_switch_lamp(
-            scene=self.scene, name="lamp_green",
+            scene=self.scene,
+            name="lamp_green",
             bulb_off_color=np.array([245, 245, 245, 255]) / 255.0,
             bulb_on_color=np.array([0, 255, 0, 255]) / 255.0,
             **lamp_kw,
@@ -282,9 +285,7 @@ class TraceShapeVLABaseEnv(BaseEnv):
             b_tr = tm.sum().item()
             r = radius[tm].unsqueeze(1)
             rot = rotation[tm]
-            v_angles = torch.tensor(
-                [0, 2 * np.pi / 3, 4 * np.pi / 3], device=device
-            )
+            v_angles = torch.tensor([0, 2 * np.pi / 3, 4 * np.pi / 3], device=device)
             lx = torch.zeros(b_tr, n, device=device)
             ly = torch.zeros(b_tr, n, device=device)
             for side in range(3):
@@ -320,7 +321,9 @@ class TraceShapeVLABaseEnv(BaseEnv):
 
             # ---- Sample shape type ----
             shape_choices = torch.tensor(
-                self.AVAILABLE_SHAPES, device=self.device, dtype=torch.int64,
+                self.AVAILABLE_SHAPES,
+                device=self.device,
+                dtype=torch.int64,
             )
             choice_idx = torch.randint(0, len(self.AVAILABLE_SHAPES), (b,), device=self.device)
             shape_type = shape_choices[choice_idx]
@@ -341,9 +344,7 @@ class TraceShapeVLABaseEnv(BaseEnv):
             self.waypoints[env_idx] = waypoints
 
             step = max(1, self.NUM_WAYPOINTS // self.NUM_CHECKPOINTS)
-            cp_idx = torch.arange(0, self.NUM_WAYPOINTS, step, device=self.device)[
-                : self.NUM_CHECKPOINTS
-            ]
+            cp_idx = torch.arange(0, self.NUM_WAYPOINTS, step, device=self.device)[: self.NUM_CHECKPOINTS]
             self.checkpoints[env_idx] = waypoints[:, cp_idx]
             self.checkpoint_visited[env_idx] = False
 
@@ -405,11 +406,11 @@ class TraceShapeVLABaseEnv(BaseEnv):
 
             # ---- Reset robot ----
             if self.robot_uids in ("panda", "panda_wristcam"):
-                qpos = np.array(
-                    [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
-                )
+                qpos = np.array([0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04])
                 qpos[:-2] += self._episode_rng.normal(
-                    0, self.robot_init_qpos_noise, len(qpos) - 2,
+                    0,
+                    self.robot_init_qpos_noise,
+                    len(qpos) - 2,
                 )
                 self.agent.reset(qpos)
                 self.agent.robot.set_root_pose(sapien.Pose([-0.615, 0, 0]))
@@ -453,15 +454,11 @@ class TraceShapeVLABaseEnv(BaseEnv):
 
         # Demo: follow waypoints
         if demo_mask.any():
-            demo_elapsed = (
-                elapsed[demo_mask] - self.pre_demo_steps_per_env[demo_mask]
-            ).clamp(min=0)
+            demo_elapsed = (elapsed[demo_mask] - self.pre_demo_steps_per_env[demo_mask]).clamp(min=0)
             wp_idx = (demo_elapsed // self.STEPS_PER_WAYPOINT).clamp(
                 max=self.NUM_WAYPOINTS - 1,
             )
-            batch_idx = torch.arange(self.waypoints.shape[0], device=self.device)[
-                demo_mask
-            ]
+            batch_idx = torch.arange(self.waypoints.shape[0], device=self.device)[demo_mask]
             red_xy = self.waypoints[batch_idx, wp_idx]
             red_pose[demo_mask, 0] = red_xy[:, 0]
             red_pose[demo_mask, 1] = red_xy[:, 1]
@@ -475,7 +472,8 @@ class TraceShapeVLABaseEnv(BaseEnv):
         # ---- Checkpoint tracking (action phase only) ----
         green_xy = self.green_cube.pose.p[:, :2]
         dist = torch.linalg.norm(
-            green_xy.unsqueeze(1) - self.checkpoints, dim=-1,
+            green_xy.unsqueeze(1) - self.checkpoints,
+            dim=-1,
         )
         newly_visited = (dist < self.CHECKPOINT_THRESH) & action_mask.unsqueeze(1)
         self.checkpoint_visited = self.checkpoint_visited | newly_visited
@@ -549,7 +547,8 @@ class TraceShapeVLABaseEnv(BaseEnv):
         # Nearest unvisited checkpoint reward
         green_xy = green_pos[:, :2]
         dist_to_cp = torch.linalg.norm(
-            green_xy.unsqueeze(1) - self.checkpoints, dim=-1,
+            green_xy.unsqueeze(1) - self.checkpoints,
+            dim=-1,
         )
         dist_to_cp = dist_to_cp + self.checkpoint_visited.float() * 1000.0
         nearest_dist = dist_to_cp.min(dim=1).values
@@ -561,11 +560,7 @@ class TraceShapeVLABaseEnv(BaseEnv):
         # Smoothness penalties
         if not torch.is_tensor(action):
             action = torch.as_tensor(action, device=self.device)
-        if (
-            not hasattr(self, "_prev_action")
-            or self._prev_action is None
-            or self._prev_action.shape != action.shape
-        ):
+        if not hasattr(self, "_prev_action") or self._prev_action is None or self._prev_action.shape != action.shape:
             self._prev_action = torch.zeros_like(action)
         delta_action = action - self._prev_action
         action_l2 = torch.linalg.norm(action, dim=-1)

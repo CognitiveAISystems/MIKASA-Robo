@@ -531,7 +531,7 @@ def main():
             break
 
         slot = tray_slots[idx]
-        sx_slot, sy_slot, sz = float(slot[0]), float(slot[1]), float(slot[2])
+        _sx_slot, _sy_slot, _sz = float(slot[0]), float(slot[1]), float(slot[2])
         # Use actual battery pose for pick center; physics may shift it slightly.
         bat_pos = env_u.batteries[idx].pose.p[0].detach().cpu().numpy()
         sx_pick, sy_pick = float(bat_pos[0]), float(bat_pos[1])

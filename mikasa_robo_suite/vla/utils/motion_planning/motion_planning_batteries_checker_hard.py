@@ -381,7 +381,7 @@ def main():
 
     z_insert_socket = float(socket_pos[2]) + 0.004
     # Grab the battery inside the socket — descend close to socket top level.
-    z_pick_socket = float(socket_pos[2]) + battery_half_h * 0.1
+    float(socket_pos[2]) + battery_half_h * 0.1
     z_place_slot = tray_top_z + 0.014
     z_place_slot_refine = z_place_slot - 0.001
 

@@ -464,7 +464,7 @@ def build_helix(
     builder = scene.create_actor_builder()
 
     total_segments = turns * segments_per_turn
-    height_per_segment = height / total_segments
+    height / total_segments
 
     for i in range(total_segments):
         angle = 2 * np.pi * i / segments_per_turn

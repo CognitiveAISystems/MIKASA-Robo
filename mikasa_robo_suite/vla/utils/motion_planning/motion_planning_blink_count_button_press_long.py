@@ -211,9 +211,7 @@ def main():
     env_id = args.env_id
 
     if env_id not in VALID_LONG_ENV_IDS:
-        raise ValueError(
-            f"Expected one of {sorted(VALID_LONG_ENV_IDS)}, got {env_id!r}."
-        )
+        raise ValueError(f"Expected one of {sorted(VALID_LONG_ENV_IDS)}, got {env_id!r}.")
 
     env_spec = gym.spec(env_id)
     max_env_steps = int(env_spec.max_episode_steps)
@@ -398,7 +396,6 @@ def main():
     # Set clear height relative to threshold (not relative to z_press) to avoid getting stuck at raw=1.
     z_unpress = press_threshold_z + required_lift + 0.03
     z_approach = z_unpress + 0.05
-    z_lift = z_unpress
     z_confirm_press = confirm_button_top_z + float(env_u.BUTTON_PRESS_Z_MARGIN) - T - EXTRA_PRESS_DEPTH
     z_confirm_unpress = z_confirm_press + 0.08
     z_confirm_approach = z_confirm_unpress + 0.05

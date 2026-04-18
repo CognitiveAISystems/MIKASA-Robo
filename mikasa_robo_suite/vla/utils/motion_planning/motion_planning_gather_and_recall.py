@@ -383,7 +383,7 @@ def main():
                 )
             )
 
-    print(f"=== GatherAndRecall Oracle MP ===")
+    print("=== GatherAndRecall Oracle MP ===")
     print(f"env_id: {env_id}")
     print(f"n_cubes: {n_cubes}")
     print(f"flash_color: {flash_color} ({color_names[flash_color]})")
@@ -524,8 +524,7 @@ def main():
         n_on = _to_int_scalar(info_now["n_on_disc"][0])
         flash_active = _to_bool_scalar(info_now["flash_active"][0])
         flash_triggered = _to_bool_scalar(info_now["flash_triggered"][0])
-        print(f"  -> cubes on disc: {n_on}/{n_cubes}, "
-              f"flash_triggered={flash_triggered}, flash_active={flash_active}")
+        print(f"  -> cubes on disc: {n_on}/{n_cubes}, flash_triggered={flash_triggered}, flash_active={flash_active}")
 
     # ---------------------------------------------------------------
     # Phase 2: Press the correct button
@@ -533,8 +532,7 @@ def main():
     if not episode_done["value"]:
         target_btn = flash_color
         btn_x, btn_y = buttons_xy[target_btn]
-        print(f"\nPhase 2: Pressing {color_names[target_btn]} button "
-              f"at [{btn_x:.3f}, {btn_y:.3f}]...")
+        print(f"\nPhase 2: Pressing {color_names[target_btn]} button at [{btn_x:.3f}, {btn_y:.3f}]...")
 
         # Close gripper before pressing
         planner.gripper_state = -1
@@ -575,7 +573,7 @@ def main():
     pressed_btn = _to_int_scalar(info_final["pressed_button"][0])
 
     print()
-    print(f"=== Results ===")
+    print("=== Results ===")
     print(f"env_id: {env_id}")
     print(f"n_cubes: {n_cubes}")
     print(f"elapsed_steps: {elapsed_steps} / {max_env_steps}")

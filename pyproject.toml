@@ -37,6 +37,7 @@ dependencies = [
   "huggingface-hub[cli]>=0.23,<1.0",
   "ipykernel>=7.0.0a2",
   "seaborn>=0.13.2",
+  "ruff>=0.15.8",
 ]
 
 [project.urls]

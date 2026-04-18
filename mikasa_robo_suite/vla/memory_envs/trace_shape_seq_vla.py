@@ -382,14 +382,22 @@ class TraceShapeSeqVLABaseEnv(BaseEnv):
             self.shape_sequence[env_idx] = shape_seq
             self.active_shape_idx[env_idx] = 0
 
-            center_x = torch.rand(b, device=self.device) * (self.SHAPE_CENTER_X_RANGE[1] - self.SHAPE_CENTER_X_RANGE[0]) + self.SHAPE_CENTER_X_RANGE[0]
-            center_y = torch.rand(b, device=self.device) * (self.SHAPE_CENTER_Y_RANGE[1] - self.SHAPE_CENTER_Y_RANGE[0]) + self.SHAPE_CENTER_Y_RANGE[0]
+            center_x = (
+                torch.rand(b, device=self.device) * (self.SHAPE_CENTER_X_RANGE[1] - self.SHAPE_CENTER_X_RANGE[0])
+                + self.SHAPE_CENTER_X_RANGE[0]
+            )
+            center_y = (
+                torch.rand(b, device=self.device) * (self.SHAPE_CENTER_Y_RANGE[1] - self.SHAPE_CENTER_Y_RANGE[0])
+                + self.SHAPE_CENTER_Y_RANGE[0]
+            )
             center_xy = torch.stack([center_x, center_y], dim=-1).unsqueeze(1).repeat(1, self.MAX_SEQUENCE_LENGTH, 1)
             self.shape_center_xy[env_idx] = center_xy
 
-            radius = torch.rand(b, self.MAX_SEQUENCE_LENGTH, device=self.device) * (
-                self.SHAPE_RADIUS_RANGE[1] - self.SHAPE_RADIUS_RANGE[0]
-            ) + self.SHAPE_RADIUS_RANGE[0]
+            radius = (
+                torch.rand(b, self.MAX_SEQUENCE_LENGTH, device=self.device)
+                * (self.SHAPE_RADIUS_RANGE[1] - self.SHAPE_RADIUS_RANGE[0])
+                + self.SHAPE_RADIUS_RANGE[0]
+            )
             rotation = torch.rand(b, self.MAX_SEQUENCE_LENGTH, device=self.device) * 2 * np.pi
 
             all_waypoints = torch.zeros(
@@ -545,7 +553,9 @@ class TraceShapeSeqVLABaseEnv(BaseEnv):
             demo_shape_idx = demo_elapsed // per_shape_demo_steps
             max_demo_shape_idx = torch.clamp(self.sequence_len[demo_mask] - 1, min=0)
             demo_shape_idx = torch.minimum(demo_shape_idx, max_demo_shape_idx)
-            wp_idx = ((demo_elapsed % per_shape_demo_steps) // self.STEPS_PER_WAYPOINT).clamp(max=self.NUM_WAYPOINTS - 1)
+            wp_idx = ((demo_elapsed % per_shape_demo_steps) // self.STEPS_PER_WAYPOINT).clamp(
+                max=self.NUM_WAYPOINTS - 1
+            )
 
             batch_idx = torch.arange(self.waypoints.shape[0], device=self.device)[demo_mask]
             red_xy = self.waypoints[batch_idx, demo_shape_idx, wp_idx]
@@ -586,7 +596,9 @@ class TraceShapeSeqVLABaseEnv(BaseEnv):
 
         shape_range = torch.arange(self.MAX_SEQUENCE_LENGTH, device=self.device).unsqueeze(0)
         valid_shape_mask = shape_range < self.sequence_len.unsqueeze(1)
-        all_shapes_closed = torch.where(valid_shape_mask, self.shape_closed, torch.ones_like(self.shape_closed)).all(dim=1)
+        all_shapes_closed = torch.where(valid_shape_mask, self.shape_closed, torch.ones_like(self.shape_closed)).all(
+            dim=1
+        )
 
         closed_count = (self.shape_closed & valid_shape_mask).sum(dim=1).float()
         sequence_progress = closed_count / torch.clamp(self.sequence_len.float(), min=1.0)
@@ -746,11 +758,7 @@ class TraceShapeSeqVLABaseEnv(BaseEnv):
 
         if not torch.is_tensor(action):
             action = torch.as_tensor(action, device=self.device)
-        if (
-            not hasattr(self, "_prev_action")
-            or self._prev_action is None
-            or self._prev_action.shape != action.shape
-        ):
+        if not hasattr(self, "_prev_action") or self._prev_action is None or self._prev_action.shape != action.shape:
             self._prev_action = torch.zeros_like(action)
 
         delta_action = action - self._prev_action

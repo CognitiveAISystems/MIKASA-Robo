@@ -387,9 +387,8 @@ def main():
     shuffle_steps = _to_int_scalar(env_u.shuffle_steps_per_env[0]) if hasattr(env_u, "shuffle_steps_per_env") else 0
     manip_start_step = cue_steps + shuffle_steps
 
-    while (
-        _to_int_scalar(env_u.elapsed_steps) < manip_start_step + int(args.manip_phase_buffer_steps)
-        and (not episode_done["value"])
+    while _to_int_scalar(env_u.elapsed_steps) < manip_start_step + int(args.manip_phase_buffer_steps) and (
+        not episode_done["value"]
     ):
         hold_steps(1)
 

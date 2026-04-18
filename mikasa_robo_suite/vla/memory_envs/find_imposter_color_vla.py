@@ -198,7 +198,7 @@ class FindImposterColorVLABaseEnv(BaseEnv):
 
             xyz_initial = torch.zeros((b, 3))
             if self.COLORS != 3:
-                angle_step = np.pi / self.COLORS
+                np.pi / self.COLORS
                 for key in self.color_dict:
                     xyz_cube = xyz_initial.clone()
                     angle = np.pi * (key - (len(self.color_dict) // 2)) / len(self.color_dict)

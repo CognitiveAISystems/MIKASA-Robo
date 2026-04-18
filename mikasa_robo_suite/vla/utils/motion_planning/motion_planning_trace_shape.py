@@ -68,7 +68,6 @@ SHAPE_NAME = {
 }
 
 
-
 def _to_bool_scalar(x):
     if x is None:
         return False
@@ -78,13 +77,11 @@ def _to_bool_scalar(x):
     return bool(arr[0]) if arr.size > 0 else False
 
 
-
 def _to_int_scalar(x):
     if torch.is_tensor(x):
         return int(x.detach().cpu().reshape(-1)[0].item())
     arr = np.asarray(x).reshape(-1)
     return int(arr[0]) if arr.size > 0 else 0
-
 
 
 def _elapsed_from_info(info):
@@ -94,7 +91,6 @@ def _elapsed_from_info(info):
     if torch.is_tensor(x):
         return int(x.detach().cpu().reshape(-1)[0].item())
     return int(np.asarray(x).reshape(-1)[0])
-
 
 
 def _validate_flatten_obs(obs):
@@ -108,14 +104,12 @@ def _validate_flatten_obs(obs):
         )
 
 
-
 def _normalize_quat_wxyz(q: np.ndarray) -> np.ndarray:
     q = np.asarray(q, dtype=np.float32)
     n = float(np.linalg.norm(q))
     if n < 1e-8:
         return np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
     return q / n
-
 
 
 def _build_ee_delta_action(prev_raw_pose: np.ndarray, next_raw_pose: np.ndarray, gripper_cmd: float) -> np.ndarray:
@@ -162,7 +156,6 @@ class EEDeltaActionLoggerWrapper(gym.Wrapper):
         return obs, reward, terminated, truncated, info
 
 
-
 def build_hold_action_pd_joint_pos(base_env, gripper_state_override: float | None = None):
     robot = base_env.agent.robot
     qpos = robot.get_qpos()
@@ -186,7 +179,6 @@ def build_hold_action_pd_joint_pos(base_env, gripper_state_override: float | Non
     return action[0]
 
 
-
 def _parse_float_list(csv_text: str):
     vals = []
     for tok in csv_text.split(","):
@@ -196,7 +188,6 @@ def _parse_float_list(csv_text: str):
     if len(vals) == 0:
         raise ValueError("Empty float list.")
     return vals
-
 
 
 def parse_args():
@@ -230,7 +221,6 @@ def parse_args():
     parser.add_argument("--trace-waypoint-stride", type=int, default=4)
     parser.add_argument("--regrasp-on-drop", type=int, default=1)
     return parser.parse_args()
-
 
 
 def main():

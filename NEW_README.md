@@ -1,10 +1,13 @@
 <h1 align="center">MIKASA-Robo (VLA Update)</h1>
 
-<h3 align="center">A memory-centric tabletop manipulation benchmark, reworked for Vision-Language-Action training</h3>
+<h3 align="center">A memory-intensive tabletop manipulation benchmark, reworked for Vision-Language-Action training</h3>
 
 <div align="center">
   <a href="https://arxiv.org/abs/2502.10550">
     <img src="https://img.shields.io/badge/arXiv-2502.10550-b31b1b.svg"/>
+  </a>
+  <a href="https://openreview.net/forum?id=9cLPurIZMj">
+    <img src="https://img.shields.io/badge/OpenReview-9cLPurIZMj-8c1aff.svg"/>
   </a>
   <a href="https://sites.google.com/view/memorybenchrobots/">
     <img src="https://img.shields.io/badge/Website-Project_Page-blue.svg"/>
@@ -15,11 +18,38 @@
   <a href="https://github.com/CognitiveAISystems/MIKASA-Robo">
     <img src="https://img.shields.io/badge/GitHub-MIKASA--Robo-green.svg"/>
   </a>
+  <a href="https://docs.astral.sh/ruff/">
+    <img src="https://img.shields.io/badge/linting-ruff-46aef7.svg"/>
+  </a>
 </div>
 
+
+
 ---
-## Важное обновление!
-Теперь этот репозиторий в `main` переквалифицирован под работу с VLA моделями и называется MIKASA-Robo-90: мы добавилии больше задач и обновили старые (теперь их 90), больше long-horizon tasks, VLA-совместимые datasets formats (RLDS, LerobotDataset-v3) и motion-planning скрипты. Если вам нужна предыдущая версия MIKASA-Robo, она сохранена в 
+
+## 🚨 Important Update: **MIKASA-Robo-90** (VLA Edition)
+
+> [!IMPORTANT]  
+> The `main` branch is now fully focused on **VLA research** and represents **MIKASA-Robo-90**.
+
+### ✨ What is new in `main`
+- ✅ **90 total tasks** (new + upgraded existing tasks)
+- ✅ More **complex** and **long-horizon** environments
+- ✅ VLA-ready dataset formats: **RLDS** and **LeRobotDataset-v3**
+- ✅ Dedicated **motion-planning** data collection scripts
+
+---
+
+## 🔎 Looking for the old MIKASA-Robo?
+
+> [!NOTE]  
+> If you need the original benchmark from the paper (**arXiv:2502.10550**), use the legacy RL branch:
+
+- 🌿 Branch: [`mikasa-robo-rl`](https://github.com/CognitiveAISystems/MIKASA-Robo/tree/mikasa-robo-rl)
+- 📦 Package version: `pip install mikasa-robo-suite==0.0.5`
+- 📄 Paper: https://arxiv.org/abs/2502.10550
+
+
 
 
 ---
@@ -50,21 +80,15 @@
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Dataset Pipeline (NPZ -> RLDS -> LeRobot)](#dataset-pipeline-npz---rlds---lerobot)
-  - [Step 1: Collect NPZ Trajectories](#step-1-collect-npz-trajectories)
-  - [Step 2: Convert NPZ to RLDS](#step-2-convert-npz-to-rlds)
-  - [Step 3: Convert RLDS to LeRobot v3](#step-3-convert-rlds-to-lerobot-v3)
-- [Data Schema](#data-schema)
+  - [Dataset Availability (Coming Soon)](#dataset-availability-coming-soon)
+  - [Data Layout on Disk](#data-layout-on-disk)
+  - [What Each Format Contains](#what-each-format-contains)
+  - [Detailed Guides (Collection + Conversion)](#detailed-guides-collection--conversion)
 - [Reproducibility Notes](#reproducibility-notes)
 - [Citation](#citation)
 
 ## Repository Update
 This repository has been significantly updated with a **VLA-first focus**.
-
-The original MIKASA-Robo benchmark (memory-intensive tabletop tasks) is now extended into a reproducible pipeline for:
-- environment benchmarking,
-- large-scale VLA trajectory collection,
-- conversion to RLDS,
-- downstream export to LeRobot v3.
 
 The codebase now separates legacy RL-oriented modules and VLA-oriented modules:
 - `mikasa_robo_suite/rl/*` for legacy RL setup,
@@ -77,40 +101,197 @@ The VLA update introduces changes intended to improve dataset quality and traini
 2. No-op/curriculum wrappers are used to avoid premature actions before manipulation phase.
 3. Memory horizons are randomized for better temporal robustness.
 4. Object layouts were adjusted to reduce ambiguity across language-conditioned goals.
-5. Oracle behavior was tuned for smoother, teleoperation-like trajectories with mild stochasticity.
-6. Saved proprio is standardized to **7D**: `xyz(3) + rpy(3) + gripper(1)`.
-7. Saved action format is standardized to **`pd_ee_delta_pose`** (7D).
-8. Collection tooling supports recovery/resume workflows for interrupted long runs.
+5. We added new task families that cover additional memory capabilities beyond the original setup (e.g., counting, long-sequence recall, timed execution, and multi-step reasoning).
+6. We introduced long-horizon variants for legacy tasks, extending the benchmark with `-Long-` versions for delayed decision and sustained-memory evaluation.
+7. Data collection is split by horizon: we generate most short-horizon trajectories with PPO oracles, while long-horizon trajectories are collected with motion planning.
+8. Saved proprio is standardized to **7D**: `xyz(3) + rpy(3) + gripper(1)`.
+9. Saved action format is standardized to **`pd_ee_delta_pose`** (7D).
 
 ## Benchmark at a Glance
-Source of truth for configured VLA tasks: `mikasa_robo_vla_envs.csv`.
+The canonical task registry is [`mikasa_robo_vla_envs.csv`](mikasa_robo_vla_envs.csv).
 
-Current manifest summary:
-- `90` configured VLA env IDs.
-- `64` short-horizon tasks and `26` long-horizon tasks (`-Long-`).
-- Data collection source split:
-  - `34` tasks via PPO-oracle rollout (`Data Source = PPO`),
-  - `56` tasks via motion-planning + replay (`Data Source = MP`).
-- Episode horizon range in manifest: from `25` to `2160` steps.
+Current benchmark snapshot:
+- **90 configured VLA environments**
+- **250 successful trajectories per task** (target), for a total of **22,500 trajectories**
+- Approximately **5 million timesteps** across the full dataset
+- Data collection split by source:
+  - **34 tasks** collected with **PPO oracle rollouts** (`Data Source = PPO`)
+  - **56 tasks** collected with **motion planning + replay** (`Data Source = MP`)
+- Episode horizon range: **25 to 2160 steps**
+
 
 ## Task Families
-Below is a compact family-level overview. Use `mikasa_robo_vla_envs.csv` for the full per-task list and prompts.
+Below is a cognitively oriented grouping (not just naming-based), derived from the VLA environment definitions and task prompts. Use `mikasa_robo_vla_envs.csv` for the full per-task list and exact instructions. Full tasks list can be found [below](#full-task-catalog)
 
-| Family | # Env IDs | Short / Long | Data Source | Memory Skill |
+| Family (High-level View) | Number of tasks | Episode Length Range (min-max) | Data Source | Core Memory / Reasoning Challenge |
 |---|---:|---:|---|---|
-| ShellGame Core | 2 | 2 / 0 | PPO | Object tracking under occlusion |
-| Intercept + InterceptGrab | 6 | 6 / 0 | PPO | Spatial prediction and timing |
-| Rotate (Lenient + Strict) | 4 | 4 / 0 | PPO | Pose memory and controlled rotation |
-| TakeItBack | 1 | 1 / 0 | PPO | Return-to-origin memory |
-| Remember (Color / Shape / Shape+Color) | 18 | 9 / 9 | PPO + MP | Delayed recall |
-| FindImposter (Color / Shape / Shape+Color) | 9 | 9 / 0 | PPO | Negation-style memory |
-| Memory Capacity (Bunch / Seq / Chain) | 18 | 9 / 9 | MP | Set and sequence memory |
-| ShellGame Lamps + Shuffle variants | 5 | 3 / 2 | PPO + MP | Tracking + conditional target selection |
-| Batteries Checker (Easy + Hard) | 4 | 4 / 0 | MP | Long-horizon hypothesis testing |
-| Blink Count + Button Press | 6 | 3 / 3 | MP | Counting + delayed execution |
-| TraceShape + TraceShapeSeq | 6 | 6 / 0 | MP | Demonstration recall and reproduction |
-| TimedTransfer | 6 | 3 / 3 | MP | Delayed timing precision |
-| GatherAndRecall | 5 | 5 / 0 | MP | Dual-task memory under manipulation |
+| Hidden-Object Tracking Under Occlusion (`ShellGame*` variants) | 7 | 30-600 | PPO + MP | Track hidden object identity through occlusion and shuffle permutations |
+| Predictive Interception and Capture (`Intercept*`, `InterceptGrab*`) | 6 | 60-60 | PPO | Infer motion from brief observations and time interception/capture actions |
+| Spatial Reference Restoration (`Rotate*`, `TakeItBack`) | 5 | 60-90 | PPO | Preserve a remembered reference state and restore target geometry |
+| Delayed Attribute Recall (`RememberColor/Shape/Shape+Color`, short + long) | 18 | 25-600 | PPO + MP | Retain color/shape bindings across delays and select the matching target |
+| Out-of-Set Detection (`FindImposter*`) | 9 | 25-25 | PPO | Remember initial set membership and identify the novel candidate |
+| Set and Sequence Capacity (`BunchOfColors`, `SeqOfColors`, `ChainOfColors`, short + long) | 18 | 400-1200 | MP | Maintain larger item sets and, when required, reproduce temporal order |
+| Demonstration Path Imitation (`TraceShape*`, `TraceShapeSeq*`) | 6 | 250-1500 | MP | Encode observed trajectories and reproduce single or multi-part traces |
+| Count-to-Action Execution (`BlinkCountButtonPress*`, short + long) | 6 | 150-1200 | MP | Count temporal events and execute the exact number of delayed actions |
+| Delayed-Time Actuation (`TimedTransfer*`, short + long) | 6 | 200-1200 | MP | Trigger manipulation at a precise future timestep after a cue |
+| Sequential Verification Memory (`BatteriesCheckerEasy/Hard`) | 4 | 540-2160 | MP | Track which batteries were already tested, avoid repeats, and complete search within a step budget |
+| Concurrent Manipulation + Cue Recall (`GatherAndRecall*`) | 5 | 200-1000 | MP | Keep a latent cue in memory while solving a concurrent manipulation subtask |
+
+
+
+## Repository Layout
+```text
+MIKASA-Robo/                        # repository root
+├── mikasa_robo_suite/              # main MIKASA-Robo Python package
+│   ├── rl/                         # legacy RL branch code
+│   └── vla/                        # VLA-focused environments and tooling
+│       ├── memory_envs/            # tasks definitions and registration
+│       ├── dataset_collectors/     # NPZ data collection pipelines (PPO + MP)
+│       └── utils/                  # shared VLA utilities and wrappers
+│           └── motion_planning/    # motion-planning scripts per task family
+│
+├── data_mikasa_robo/               # local dataset storage root
+│   ├── data_npz/                   # source per-episode NPZ trajectories
+│   ├── data_rlds/                  # converted RLDS datasets
+│   └── data_lerobot/               # converted LeRobot v3 datasets
+│
+├── utils/                          # repository-level helper scripts
+│   ├── convert_npz_to_rlds/        # NPZ -> RLDS conversion project
+│   └── convert_rlds_to_lerobot/    # RLDS -> LeRobot v3 conversion project
+│
+└── mikasa_robo_vla_envs.csv        # canonical manifest of VLA tasks and metadata
+```
+
+## Installation
+### Recommended (uv)
+```bash
+# Install uv: https://docs.astral.sh/uv/getting-started/installation/
+git clone git@github.com:CognitiveAISystems/MIKASA-Robo.git
+cd MIKASA-Robo
+uv sync --frozen
+```
+
+### Alternative
+```bash
+pip install -e .
+# or
+pip install mikasa-robo-suite (not supported for VLA update now)
+```
+
+
+
+## Quick Start (TODO: update after release to pypi and creation of the google colab demo notebook)
+```python
+import gymnasium as gym
+import torch
+
+import mikasa_robo_suite.vla.memory_envs  # registers VLA env IDs
+from mikasa_robo_suite.vla.utils.wrappers import StateOnlyTensorToDictWrapper
+
+env_id = "RememberColor3-VLA-v0"
+env = gym.make(
+    env_id,
+    num_envs=4,
+    obs_mode="rgb",
+    control_mode="pd_ee_delta_pose",
+    render_mode="all",
+)
+env = StateOnlyTensorToDictWrapper(env)
+
+obs, _ = env.reset(seed=42)
+for _ in range(25):
+    action = torch.from_numpy(env.action_space.sample())
+    obs, reward, terminated, truncated, info = env.step(action)
+
+env.close()
+```
+
+## Dataset Pipeline (NPZ -> RLDS -> LeRobot)
+
+This benchmark uses a three-stage dataset pipeline:
+- **NPZ** as source episode dumps from successful rollouts (oracle PPO / motion planning),
+- **RLDS** as a standardized sequence dataset format for training/evaluation pipelines, [RLDS](https://github.com/google-research/rlds), [openvlaoft](https://openvla-oft.github.io/) uses this format
+- **LeRobot v3** as an ecosystem-friendly format for policy training and tooling. [lerobot dataset v3](https://huggingface.co/docs/lerobot/lerobot-dataset-v3)
+
+All three formats represent the same core signals (vision, proprio, actions, reward/success/done, language), but with different packaging conventions optimized for different workflows.
+
+### Dataset Availability (Coming Soon)
+
+Public dataset releases are being prepared.
+
+- 🤗 **Hugging Face (NPZ source trajectories):** _coming soon_
+- 🤗 **Hugging Face (RLDS exports):** _coming soon_
+- 🤗 **Hugging Face (LeRobot v3 exports):** _coming soon_
+
+> [!NOTE]
+> Add your release links above once the datasets are published.
+
+### Data Layout on Disk
+
+Default local layout:
+
+```text
+data_mikasa_robo/
+  data_npz/<task>/train_data_*.npz
+  data_npz/<task>/metadata.json
+  data_rlds/<task>/1.0.0/...
+  data_lerobot/<task>/...
+```
+
+### What Each Format Contains
+
+#### NPZ (source trajectories)
+Per-episode files at `data_mikasa_robo/data_npz/<task>/train_data_*.npz`.
+
+- `rgb`: `uint8`, shape `[T, 128, 128, 6]` (top + wrist RGB concatenated by channel)
+- `proprio`: `float32`, shape `[T, 7]` (`xyz + rpy + gripper`)
+- `action`: `float32`, shape `[T, 7]` (`pd_ee_delta_pose`)
+- `reward`: `float32`, shape `[T]`
+- `success`: `int32`, shape `[T]`
+- `done`: `int32`, shape `[T]`
+- `language_instruction`: scalar string
+- `success_once`: scalar bool
+- `episode_length`: scalar int32
+- `episode_seed`: scalar int64
+
+Each task folder also stores `metadata.json` with aggregate episode statistics.
+
+#### RLDS (standardized sequential dataset)
+Versioned task datasets at `data_mikasa_robo/data_rlds/<task>/1.0.0/`.
+
+Key mapped fields include:
+- `steps.observation.image` (top/base camera)
+- `steps.observation.wrist_image`
+- `steps.observation.proprio`
+- `steps.action`
+- `steps.reward`
+- `steps.is_first`, `steps.is_last`, `steps.is_terminal`
+- `steps.language_instruction`
+
+#### LeRobot v3 (ecosystem format)
+Converted datasets at `data_mikasa_robo/data_lerobot/<task>/...`, with LeRobot-compatible metadata and shard layout for downstream training tooling.
+
+### Detailed Guides (Collection + Conversion)
+
+To keep this main README lightweight, detailed operational instructions are maintained in dedicated docs:
+
+- **NPZ collection (PPO + motion planning, resume, parallel launchers):**  
+  [mikasa_robo_suite/vla/dataset_collectors/README.md](mikasa_robo_suite/vla/dataset_collectors/README.md)
+- **NPZ -> RLDS conversion:**  
+  [utils/convert_npz_to_rlds/README.md](utils/convert_npz_to_rlds/README.md)
+- **RLDS -> LeRobot v3 conversion:**  
+  [utils/convert_rlds_to_lerobot/README.md](utils/convert_rlds_to_lerobot/README.md)
+
+## Reproducibility Notes
+1. Use `uv sync --frozen` for lockfile-consistent environments.
+2. Keep `control_mode=pd_ee_delta_pose` consistent between collection and replay.
+3. Prefer manifest-driven runs from `mikasa_robo_vla_envs.csv` (`Data Source` column).
+4. For long-horizon MP tasks, keep `--max-attempts` sufficiently high.
+5. Validate each stage before proceeding:
+   - NPZ exists and includes `metadata.json`,
+   - RLDS has `dataset_info.json`, `features.json`, and tfrecords,
+   - LeRobot output has `meta/info.json` and data/video shards.
+
 
 ## Full Task Catalog
 Complete list of tasks from `mikasa_robo_vla_envs.csv` (in manifest order).
@@ -208,246 +389,17 @@ Complete list of tasks from `mikasa_robo_vla_envs.csv` (in manifest order).
 | 89 | `GatherAndRecall7-VLA-v0` | 800 | MP | Move all cubes onto the disc. A lamp will briefly flash while you work. After all cubes are placed, press the button matching the flash color. |
 | 90 | `GatherAndRecall9-VLA-v0` | 1000 | MP | Move all cubes onto the disc. A lamp will briefly flash while you work. After all cubes are placed, press the button matching the flash color. |
 
-## Repository Layout
-```text
-MIKASA-Robo/
-├── mikasa_robo_suite/
-│   ├── rl/
-│   └── vla/
-│       ├── memory_envs/
-│       ├── dataset_collectors/
-│       └── utils/
-│           └── motion_planning/
-├── data_mikasa_robo/
-│   ├── data_npz/
-│   ├── data_rlds/
-│   └── data_lerobot/
-├── utils/
-│   ├── run_parallel_npz_collection.sh
-│   ├── resume_interrupted_mp_collection.sh
-│   ├── convert_npz_to_rlds/
-│   └── convert_rlds_to_lerobot/
-└── mikasa_robo_vla_envs.csv
-```
-
-## Installation
-### Recommended (uv)
-```bash
-git clone git@github.com:CognitiveAISystems/MIKASA-Robo.git
-cd MIKASA-Robo
-uv sync --frozen
-```
-
-### Alternative
-```bash
-pip install -e .
-# or
-pip install mikasa-robo-suite
-```
-
-Python compatibility from `pyproject.toml`: `>=3.9,<3.12`.
-
-## Quick Start
-```python
-import gymnasium as gym
-import torch
-
-import mikasa_robo_suite.vla.memory_envs  # registers VLA env IDs
-from mikasa_robo_suite.vla.utils.wrappers import StateOnlyTensorToDictWrapper
-
-env_id = "RememberColor3-VLA-v0"
-env = gym.make(
-    env_id,
-    num_envs=4,
-    obs_mode="rgb",
-    control_mode="pd_ee_delta_pose",
-    render_mode="all",
-)
-env = StateOnlyTensorToDictWrapper(env)
-
-obs, _ = env.reset(seed=42)
-for _ in range(25):
-    action = torch.from_numpy(env.action_space.sample())
-    obs, reward, terminated, truncated, info = env.step(action)
-
-env.close()
-```
-
-## Dataset Pipeline (NPZ -> RLDS -> LeRobot)
-
-### Step 1: Collect NPZ Trajectories
-
-#### A) Single-task collection (PPO-oracle tasks)
-Use when `Data Source = PPO` in `mikasa_robo_vla_envs.csv`.
-
-```bash
-uv run python mikasa_robo_suite/vla/dataset_collectors/get_mikasa_robo_datasets.py \
-  --env-id RememberColor3-VLA-v0 \
-  --path-to-save-data data_mikasa_robo \
-  --ckpt-dir . \
-  --num-train-data 250
-```
-
-This script expects oracle checkpoints under `oracle_checkpoints/**/final_success_ckpt.pt`.
-
-#### B) Single-task collection (Motion-planning tasks)
-Use when `Data Source = MP`.
-
-```bash
-uv run python mikasa_robo_suite/vla/dataset_collectors/get_mikasa_robo_datasets_motion_planning.py \
-  --env-id TraceShapeHard-VLA-v0 \
-  --path-to-save-data data_mikasa_robo \
-  --num-train-data 250 \
-  --max-attempts 5000 \
-  --seed 0
-```
-
-Collector behavior:
-- planner generates raw trajectory,
-- ManiSkill replay converts to `pd_ee_delta_pose`,
-- successful replay rollouts are saved as per-episode `.npz`.
-
-#### C) Parallel mixed PPO+MP collection
-The helper launcher reads an env list file with format:
-`<env_id> <max_length> <enabled(TRUE/FALSE)> <method(PPO/MP)>`
-
-Generate it directly from the manifest:
-```bash
-python - <<'PY'
-import csv
-
-with open("mikasa_robo_vla_envs.csv", newline="") as f_in, open("envs.txt", "w", encoding="utf-8") as f_out:
-    reader = csv.DictReader(f_in)
-    for row in reader:
-        f_out.write(
-            f"{row['name']}\t{row['max length']}\t{row['Configured']}\t{row['Data Source']}\n"
-        )
-print("Wrote envs.txt")
-PY
-```
-
-Example run:
-```bash
-GPU_LIST=0,1,2 JOBS_PER_GPU=2 NUM_TRAIN_DATA=250 MAX_ATTEMPTS_MP=5000 \
-bash utils/run_parallel_npz_collection.sh envs.txt
-```
-
-#### D) Resume interrupted MP jobs
-```bash
-bash utils/resume_interrupted_mp_collection.sh
-```
-(Adjust `ENVS=(...)` in the script before launch.)
-
----
-
-### Step 2: Convert NPZ to RLDS
-Use the isolated converter project (recommended):
-
-```bash
-uv sync --project utils/convert_npz_to_rlds/rlds_dataset_builder
-```
-
-#### Convert one task
-```bash
-uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-  python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-  --task RememberColor3-VLA-v0 \
-  --overwrite-dest
-```
-
-#### Convert all currently available tasks in `data_mikasa_robo/data_npz`
-```bash
-for task_dir in data_mikasa_robo/data_npz/*; do
-  [ -d "${task_dir}" ] || continue
-  task="$(basename "${task_dir}")"
-  [[ "${task}" == _* ]] && continue
-
-  uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-    python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-    --task "${task}" \
-    --overwrite-dest
-done
-```
-
-Outputs are written to:
-- `data_mikasa_robo/data_rlds/<task>/1.0.0/`
-
-With key files:
-- `dataset_info.json`
-- `features.json`
-- `mikasa_dataset-train.tfrecord-*`
-- copied source `metadata.json`
-
----
-
-### Step 3: Convert RLDS to LeRobot v3
-Prepare the converter environment:
-
-```bash
-uv sync --project utils/convert_rlds_to_lerobot
-```
-
-#### Convert one task
-```bash
-uv run --project utils/convert_rlds_to_lerobot \
-  python utils/convert_rlds_to_lerobot/convert_rlds_to_lerobot.py \
-  --task RememberColor3-VLA-v0 \
-  --overwrite-dest
-```
-
-#### Convert all tasks
-```bash
-uv run --project utils/convert_rlds_to_lerobot \
-  python utils/convert_rlds_to_lerobot/convert_rlds_to_lerobot.py \
-  --all \
-  --overwrite-dest
-```
-
-Default output:
-- `data_mikasa_robo/data_lerobot/<task>/...`
-
-## Data Schema
-### NPZ episode schema (`data_mikasa_robo/data_npz/<task>/train_data_*.npz`)
-- `rgb`: `uint8`, shape `[T, 128, 128, 6]` (top + wrist RGB concatenated by channel)
-- `proprio`: `float32`, shape `[T, 7]` (`xyz+rpy+gripper`)
-- `action`: `float32`, shape `[T, 7]` (`pd_ee_delta_pose`)
-- `reward`: `float32`, shape `[T]`
-- `success`: `int32`, shape `[T]`
-- `done`: `int32`, shape `[T]`
-- `language_instruction`: scalar string
-- `success_once`: scalar bool
-- `episode_length`: scalar int32
-- `episode_seed`: scalar int64
-
-### RLDS schema highlights
-RLDS builder (`utils/convert_npz_to_rlds/rlds_dataset_builder/mikasa_dataset/...`) maps NPZ into:
-- `steps.observation.image` (base/top camera),
-- `steps.observation.wrist_image`,
-- `steps.observation.proprio`,
-- `steps.action`, `steps.reward`, `steps.is_first/is_last/is_terminal`,
-- `steps.language_instruction`.
-
-## Reproducibility Notes
-1. Use `uv sync --frozen` for lockfile-consistent environments.
-2. Keep `control_mode=pd_ee_delta_pose` consistent between collection and replay.
-3. Prefer manifest-driven runs from `mikasa_robo_vla_envs.csv` (`Data Source` column).
-4. For long-horizon MP tasks, keep `--max-attempts` sufficiently high.
-5. Validate each stage before proceeding:
-   - NPZ exists and includes `metadata.json`,
-   - RLDS has `dataset_info.json`, `features.json`, and tfrecords,
-   - LeRobot output has `meta/info.json` and data/video shards.
 
 ## Citation
 If you use MIKASA-Robo in research, please cite:
 
 ```bibtex
-@misc{cherepanov2025shaping,
-  title={Shaping Memory: How Environment Design Impacts Memory and Reasoning in Visual Reinforcement Learning},
-  author={Egor Cherepanov and Mikhail Terekhov and Yaroslav Ilyushin and Ivan Drokin and Nadezhda Chirkova and Mikhail Burtsev},
-  year={2025},
-  eprint={2502.10550},
-  archivePrefix={arXiv},
-  primaryClass={cs.AI},
-  url={https://arxiv.org/abs/2502.10550}
+@inproceedings{
+    cherepanov2026mikasarobo,
+    title={Memory, Benchmark \& Robots: A Benchmark for Solving Complex Tasks with Reinforcement Learning},
+    author={Egor Cherepanov and Nikita Kachaev and Alexey Kovalev and Aleksandr Panov},
+    booktitle={The Fourteenth International Conference on Learning Representations},
+    year={2026},
+    url={https://openreview.net/forum?id=9cLPurIZMj}
 }
 ```

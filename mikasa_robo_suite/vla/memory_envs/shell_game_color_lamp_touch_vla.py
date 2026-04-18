@@ -248,7 +248,8 @@ class ShellGameColorLampTouchVLABaseEnv(BaseEnv):
         cur = self.cue_steps_per_env.shape[0]
         if n > cur:
             p = n - cur
-            z = lambda *s, **kw: torch.zeros(*s, device=self.device, **kw)
+            def z(*s, **kw):
+                return torch.zeros(*s, device=self.device, **kw)
             self.cue_steps_per_env = torch.cat([self.cue_steps_per_env, z(p, dtype=torch.int64)])
             self.target_color = torch.cat([self.target_color, z(p, dtype=torch.int64)])
             self.slot_positions = torch.cat([self.slot_positions, z(p, 3, 3)])

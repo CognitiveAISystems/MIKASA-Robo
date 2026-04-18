@@ -236,7 +236,7 @@ class BunchOfColorsEnv(BaseEnv):
         center_pose_expanded = self.center_pose.repeat(b_, 1)
         show_initial_expanded = show_initial_cubes.unsqueeze(-1)
         empty_table_expanded = empty_table.unsqueeze(-1)
-        show_all_expanded = show_all_cubes.unsqueeze(-1)
+        show_all_cubes.unsqueeze(-1)
 
         for key, shape in self.color_dict.items():
             mask_target = is_target_cubes[key]

@@ -291,16 +291,15 @@ class TimedTransferVLABaseEnv(BaseEnv):
 
             # Oracle info: the delay value (constant per variant, but stored as tensor)
             self.oracle_info = torch.full(
-                (self.num_envs,), self.DELAY_STEPS, dtype=torch.float32, device=self.device,
+                (self.num_envs,),
+                self.DELAY_STEPS,
+                dtype=torch.float32,
+                device=self.device,
             )
 
             if self.robot_uids in ("panda", "panda_wristcam"):
-                qpos = np.array(
-                    [0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04]
-                )
-                qpos[:-2] += self._episode_rng.normal(
-                    0, self.robot_init_qpos_noise, len(qpos) - 2
-                )
+                qpos = np.array([0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04])
+                qpos[:-2] += self._episode_rng.normal(0, self.robot_init_qpos_noise, len(qpos) - 2)
                 self.agent.reset(qpos)
                 self.agent.robot.set_root_pose(sapien.Pose([-0.615, 0, 0]))
             else:
@@ -430,18 +429,12 @@ class TimedTransferVLABaseEnv(BaseEnv):
 
         is_grasped = info["is_grasped"].float()
 
-        static_reward = 1 - torch.tanh(
-            5.0 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], dim=1)
-        )
+        static_reward = 1 - torch.tanh(5.0 * torch.linalg.norm(self.agent.robot.get_qvel()[..., :-2], dim=1))
 
         # Smoothness penalty
         if not torch.is_tensor(action):
             action = torch.as_tensor(action, device=self.device)
-        if (
-            not hasattr(self, "_prev_action")
-            or self._prev_action is None
-            or self._prev_action.shape != action.shape
-        ):
+        if not hasattr(self, "_prev_action") or self._prev_action is None or self._prev_action.shape != action.shape:
             self._prev_action = torch.zeros_like(action)
         delta_action = action - self._prev_action
         action_l2 = torch.linalg.norm(action, dim=1)

@@ -354,7 +354,7 @@ def main():
     tcp_q = tcp_raw[3:]  # top-down grasp orientation
 
     cube_pos = env_u.blue_cube.pose.p[0].detach().cpu().numpy()
-    green_disc_pos = env_u.green_disc_center[0].detach().cpu().numpy()
+    env_u.green_disc_center[0].detach().cpu().numpy()
     red_disc_pos = env_u.red_disc_center[0].detach().cpu().numpy()
 
     disc_hh = float(env_u.DISC_HALF_HEIGHT)
@@ -364,9 +364,9 @@ def main():
     red_x, red_y, red_z = float(red_disc_pos[0]), float(red_disc_pos[1]), float(red_disc_pos[2])
 
     # Z heights for the manipulation sequence
-    z_approach = cube_z + 0.12           # above cube for approach
-    z_grasp = cube_z                     # at cube center for grasping
-    z_lift = 0.20                        # well above table
+    z_approach = cube_z + 0.12  # above cube for approach
+    z_grasp = cube_z  # at cube center for grasping
+    z_lift = 0.20  # well above table
     z_place = red_z + disc_hh + cube_hs + 0.003  # cube resting on red disc
 
     # Timing
@@ -375,7 +375,7 @@ def main():
     window_end = _to_int_scalar(env_u.window_end[0])
     delay = int(env_u.DELAY_STEPS)
 
-    print(f"=== TimedTransfer Oracle MP ===")
+    print("=== TimedTransfer Oracle MP ===")
     print(f"env_id: {env_id}")
     print(f"delay: {delay} steps")
     print(f"signal_step: {signal_step}")
@@ -456,8 +456,10 @@ def main():
         placement_lead_steps = 3
         remaining = max(0, window_start - elapsed - placement_lead_steps)
         if remaining > 0:
-            print(f"Holding above red disc for {remaining} steps "
-                  f"(elapsed={elapsed}, window_start={window_start}, lead={placement_lead_steps})")
+            print(
+                f"Holding above red disc for {remaining} steps "
+                f"(elapsed={elapsed}, window_start={window_start}, lead={placement_lead_steps})"
+            )
             hold_steps(remaining)
 
     # ---------------------------------------------------------------
@@ -494,7 +496,7 @@ def main():
     cube_to_red_dist = float(info_final["cube_to_red_dist"][0].item())
 
     print()
-    print(f"=== Results ===")
+    print("=== Results ===")
     print(f"env_id: {env_id}")
     print(f"delay: {delay}")
     print(f"max_episode_steps: {max_env_steps}")

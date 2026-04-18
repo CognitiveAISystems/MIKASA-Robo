@@ -6,9 +6,9 @@ from .blink_count_button_press_vla import *
 from .bunch_of_colors_vla import *
 from .chain_of_colors_vla import *
 from .find_imposter_color_vla import *
-from .gather_and_recall_vla import *
 from .find_imposter_shape_and_color_vla import *
 from .find_imposter_shape_vla import *
+from .gather_and_recall_vla import *
 from .intercept_grab_vla import *
 from .intercept_vla import *
 from .remember_color_vla import *
@@ -25,5 +25,5 @@ from .shell_game_shuffle_touch_vla import *
 from .shell_game_touch_vla import *
 from .take_it_back_vla import *
 from .timed_transfer_vla import *
-from .trace_shape_vla import *
 from .trace_shape_seq_vla import *
+from .trace_shape_vla import *

@@ -30,8 +30,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = "cup_with_ball_number"
-        prompt_info = None
         EPISODE_TIMEOUT = 90
     elif env_id in [
         "InterceptSlow-v0",
@@ -47,8 +45,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 90
     elif env_id in ["RotateLenientPos-v0", "RotateLenientPosNeg-v0", "RotateStrictPos-v0", "RotateStrictPosNeg-v0"]:
         wrappers_list = [
@@ -58,8 +54,6 @@ def env_info(env_id):
             (RotateRenderAngleInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = "angle_diff"
-        prompt_info = "target_angle"
         EPISODE_TIMEOUT = 90
     elif env_id in ["CameraShutdownPush-v0", "CameraShutdownPick-v0"]:
         wrappers_list = [
@@ -68,8 +62,6 @@ def env_info(env_id):
             (RenderStepInfoWrapper, {}),
             (RenderRewardInfoWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 90
     elif env_id in ["TakeItBack-v0"]:
         wrappers_list = [
@@ -78,8 +70,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 180
     elif env_id in ["RememberColor3-v0", "RememberColor5-v0", "RememberColor9-v0"]:
         wrappers_list = [
@@ -89,8 +79,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 60
     elif env_id in ["RememberShape3-v0", "RememberShape5-v0", "RememberShape9-v0"]:
         wrappers_list = [
@@ -100,8 +88,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 60
     elif env_id in ["RememberShapeAndColor3x2-v0", "RememberShapeAndColor3x3-v0", "RememberShapeAndColor5x3-v0"]:
         wrappers_list = [
@@ -111,8 +97,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 60
     elif env_id in ["BunchOfColors3-v0", "BunchOfColors5-v0", "BunchOfColors7-v0"]:
         wrappers_list = [
@@ -122,8 +106,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 120
     elif env_id in ["SeqOfColors3-v0", "SeqOfColors5-v0", "SeqOfColors7-v0"]:
         wrappers_list = [
@@ -133,8 +115,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 120
     elif env_id in ["ChainOfColors3-v0", "ChainOfColors5-v0", "ChainOfColors7-v0"]:
         wrappers_list = [
@@ -144,8 +124,6 @@ def env_info(env_id):
             (RenderRewardInfoWrapper, {}),
             (DebugRewardWrapper, {}),
         ]
-        oracle_info = None
-        prompt_info = None
         EPISODE_TIMEOUT = 120
     else:
         raise ValueError(f"Unknown environment: {env_id}")

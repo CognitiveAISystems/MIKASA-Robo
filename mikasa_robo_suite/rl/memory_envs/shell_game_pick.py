@@ -351,7 +351,7 @@ class ShellGamePickEnv(BaseEnv):
         width_error = torch.abs(current_gripper_width - optimal_width)
         # Apply threshold - if error is within threshold, treat it as zero error
         width_error = torch.clamp(width_error - 0.005, min=0.0)
-        closing_reward = torch.exp(-5.0 * width_error) * reached_status  # Gaussian reward with peak at optimal_width
+        torch.exp(-5.0 * width_error) * reached_status  # Gaussian reward with peak at optimal_width
 
         reward = (
             3.0 * reaching_reward

@@ -10,9 +10,10 @@ For every task (by default from `mikasa_robo_vla_envs.csv`) this script:
    - gif.
 
 Notes:
-- PPO path keeps step + env-specific wrappers and removes reward render/debug wrappers.
+- PPO path keeps env-specific wrappers, forcibly keeps step rendering, and removes reward render/debug wrappers.
 - Motion-planning path uses each planner's `--overlay-info` flag
-  (default `0`, which removes debug overlays in planner scripts).
+  (default `1` to keep wrapper-driven step/env overlays), while reward overlay is disabled via env flag.
+- This script does not draw any custom step text; step is expected from `RenderStepInfoWrapper`.
 """
 
 from __future__ import annotations
@@ -20,6 +21,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -41,6 +44,7 @@ from mikasa_robo_suite.vla.dataset_collectors.get_mikasa_robo_datasets import (
     env_info,
     get_list_of_all_checkpoints_available,
 )
+from mikasa_robo_suite.vla.utils.wrappers import RenderStepInfoWrapper
 
 DEFAULT_TASKS_CSV = Path("mikasa_robo_vla_envs.csv")
 DEFAULT_OUTPUT_DIR = Path("videos/benchmark_demos")
@@ -109,6 +113,12 @@ def parse_args() -> argparse.Namespace:
         help="Optional comma-separated env ids. If empty, use tasks from --tasks-csv.",
     )
     parser.add_argument(
+        "--skip-tasks",
+        type=str,
+        default="",
+        help="Optional comma-separated env ids to skip.",
+    )
+    parser.add_argument(
         "--include-unconfigured",
         action="store_true",
         help="Include rows where CSV column 'Configured' is false.",
@@ -134,6 +144,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=123, help="Base seed for rollout attempts.")
     parser.add_argument(
+        "--shellgame-seed",
+        type=int,
+        default=2026,
+        help="Base seed used for ShellGame* tasks (attempt i uses shellgame-seed+i).",
+    )
+    parser.add_argument(
         "--max-attempts-per-task",
         type=int,
         default=8,
@@ -156,8 +172,12 @@ def parse_args() -> argparse.Namespace:
         "--motion-overlay-info",
         type=int,
         choices=(0, 1),
-        default=0,
-        help="Value passed to planner --overlay-info (0 disables planner debug overlays).",
+        default=1,
+        help=(
+            "Value passed to planner --overlay-info (0/1). "
+            "Use 1 to enable wrapper-driven step/env overlays. "
+            "Reward overlay is disabled by env flag in this script."
+        ),
     )
     parser.add_argument(
         "--gif-fps",
@@ -209,6 +229,14 @@ def parse_bool(value: Any) -> bool:
         return False
     text = str(value).strip().lower()
     return text in {"1", "true", "yes", "y", "on"}
+
+
+def parse_env_id_list(raw: str) -> List[str]:
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+
+def normalize_env_token(token: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", token.lower())
 
 
 def to_numpy(x: Any) -> np.ndarray:
@@ -271,13 +299,22 @@ def get_mp4_fps(mp4_path: Path, fallback: float = 30.0) -> float:
     return fps
 
 
-def run_cmd(cmd: Sequence[str], cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
+def run_cmd(
+    cmd: Sequence[str],
+    cwd: Optional[Path] = None,
+    env_overrides: Optional[Dict[str, str]] = None,
+) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    if env_overrides:
+        env.update({str(k): str(v) for k, v in env_overrides.items()})
+
     proc = subprocess.run(
         list(cmd),
         cwd=str(cwd) if cwd is not None else None,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=env,
     )
     if proc.returncode != 0:
         tail = "\n".join((proc.stderr or "").splitlines()[-60:])
@@ -314,17 +351,48 @@ def load_tasks_from_csv(tasks_csv: Path, include_unconfigured: bool) -> List[Tas
 
 def resolve_tasks(args: argparse.Namespace) -> List[TaskSpec]:
     csv_tasks = load_tasks_from_csv(args.tasks_csv, include_unconfigured=args.include_unconfigured)
-    if not args.tasks.strip():
-        return csv_tasks
+    skip_envs_exact = set(parse_env_id_list(args.skip_tasks))
+    skip_envs_norm = [normalize_env_token(x) for x in skip_envs_exact if normalize_env_token(x)]
 
-    requested = [x.strip() for x in args.tasks.split(",") if x.strip()]
+    def is_skipped(env_id: str) -> bool:
+        if env_id in skip_envs_exact:
+            return True
+        env_norm = normalize_env_token(env_id)
+        if env_norm in skip_envs_norm:
+            return True
+        return any(tok in env_norm for tok in skip_envs_norm)
+
+    if not args.tasks.strip():
+        if not skip_envs_exact:
+            return csv_tasks
+        return [t for t in csv_tasks if not is_skipped(t.env_id)]
+
+    requested = parse_env_id_list(args.tasks)
     by_name = {t.env_id: t for t in csv_tasks}
+    by_norm = {normalize_env_token(t.env_id): t for t in csv_tasks}
     out: List[TaskSpec] = []
-    for env_id in requested:
-        if env_id in by_name:
-            out.append(by_name[env_id])
+    for token in requested:
+        token_norm = normalize_env_token(token)
+        candidate: Optional[TaskSpec] = None
+
+        if token in by_name:
+            candidate = by_name[token]
+        elif token_norm in by_norm:
+            candidate = by_norm[token_norm]
         else:
-            out.append(TaskSpec(env_id=env_id, source_hint=None, configured=True, prompt=""))
+            fuzzy_matches = [task for env_norm, task in by_norm.items() if token_norm and token_norm in env_norm]
+            if len(fuzzy_matches) == 1:
+                candidate = fuzzy_matches[0]
+            elif len(fuzzy_matches) > 1:
+                # Prefer shortest normalized id when multiple fuzzy matches exist.
+                candidate = sorted(fuzzy_matches, key=lambda t: len(normalize_env_token(t.env_id)))[0]
+
+        if candidate is None:
+            candidate = TaskSpec(env_id=token, source_hint=None, configured=True, prompt="")
+
+        if is_skipped(candidate.env_id):
+            continue
+        out.append(candidate)
     return out
 
 
@@ -431,6 +499,21 @@ def drop_reward_render_wrappers(
     return filtered, removed_names
 
 
+def ensure_step_render_wrapper(
+    wrappers_list: Sequence[Tuple[Any, Dict[str, Any]]],
+) -> Tuple[List[Tuple[Any, Dict[str, Any]]], bool]:
+    """Ensure RenderStepInfoWrapper is present exactly once."""
+    out = list(wrappers_list)
+    has_step = any(
+        getattr(wrapper_class, "__name__", str(wrapper_class)).replace("_", "").lower() == "renderstepinfowrapper"
+        for wrapper_class, _ in out
+    )
+    if has_step:
+        return out, False
+    out.append((RenderStepInfoWrapper, {}))
+    return out, True
+
+
 def pick_camera_keys(camera_keys: Sequence[str]) -> Tuple[str, str]:
     if not camera_keys:
         raise ValueError("No cameras found.")
@@ -517,7 +600,14 @@ def run_motion_planning_episode(
         "--trajectory-name",
         "trajectory",
     ]
-    run_cmd(cmd, cwd=Path.cwd())
+    run_cmd(
+        cmd,
+        cwd=Path.cwd(),
+        env_overrides={
+            # Keep wrapper-driven step/env overlays while suppressing reward text.
+            "MIKASA_DISABLE_REWARD_OVERLAY": "1",
+        },
+    )
 
     mp4_candidates = sorted(run_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
     if not mp4_candidates:
@@ -569,6 +659,8 @@ def run_ppo_episode(
         env_timeout = int(spec.max_episode_steps)
 
     wrappers_list, removed_wrappers = drop_reward_render_wrappers(wrappers_list)
+    wrappers_list, step_wrapper_added = ensure_step_render_wrapper(wrappers_list)
+    wrapper_names = [getattr(wrapper_class, "__name__", str(wrapper_class)) for wrapper_class, _ in wrappers_list]
     max_steps = int(ppo_max_steps) if ppo_max_steps is not None else int(env_timeout)
 
     chosen_sim_backend = sim_backend
@@ -680,6 +772,8 @@ def run_ppo_episode(
                 "max_steps": max_steps,
                 "sim_backend": chosen_sim_backend,
                 "reward_wrappers_removed": removed_wrappers,
+                "wrappers_applied": wrapper_names,
+                "step_wrapper_added": bool(step_wrapper_added),
             },
         )
     finally:
@@ -727,10 +821,7 @@ def compose_frames(
     n_wrist = len(wrist_frames)
     n = max(n_general, n_top, n_wrist)
     if n <= 0:
-        raise ValueError(
-            f"Cannot compose empty streams: "
-            f"general={n_general}, top={n_top}, wrist={n_wrist}"
-        )
+        raise ValueError(f"Cannot compose empty streams: general={n_general}, top={n_top}, wrist={n_wrist}")
     out: List[np.ndarray] = []
     for idx in range(n):
         g_idx = min(idx, n_general - 1)
@@ -837,7 +928,11 @@ def compose_motion_to_raw_mp4(
                 else:
                     break
                 top_raw, wrist_raw = get_side(i)
-                composed = compose_single_frame(general_rgb, ensure_hwc_rgb(top_raw), ensure_hwc_rgb(wrist_raw))
+                composed = compose_single_frame(
+                    general_rgb,
+                    ensure_hwc_rgb(top_raw),
+                    ensure_hwc_rgb(wrist_raw),
+                )
 
                 if writer is None:
                     h, w = composed.shape[:2]
@@ -968,9 +1063,14 @@ def try_export_successful_episode(
     attempt_errors: List[str] = []
     attempts_tried = 0
 
+    def rollout_seed_for_task(env_id: str, attempt_idx_local: int) -> int:
+        if env_id.startswith("ShellGame"):
+            return int(args.shellgame_seed) + int(attempt_idx_local)
+        return int(args.seed) + int(attempt_idx_local)
+
     for attempt_idx in range(args.max_attempts_per_task):
         attempts_tried += 1
-        seed = int(args.seed) + attempt_idx
+        seed = rollout_seed_for_task(task.env_id, attempt_idx)
 
         try:
             with tempfile.TemporaryDirectory(prefix=f"demo_{safe_name}_seed_{seed}_") as td:
@@ -997,7 +1097,10 @@ def try_export_successful_episode(
                         attempt_errors.append(f"seed={seed}: planner rollout ended without success.")
                         continue
 
-                    frames_written = compose_motion_to_raw_mp4(artifacts=artifacts, out_raw_mp4=raw_composed_mp4)
+                    frames_written = compose_motion_to_raw_mp4(
+                        artifacts=artifacts,
+                        out_raw_mp4=raw_composed_mp4,
+                    )
                     fps = float(artifacts.fps)
                     source_meta = artifacts.source_meta
                 elif policy == "ppo":

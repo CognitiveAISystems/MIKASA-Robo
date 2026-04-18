@@ -644,7 +644,7 @@ class NatureCNN(nn.Module):
 
         if "rgb" in self.list_of_obs_keys:
             in_channels = sample_obs["rgb"].shape[-1]
-            image_size = (sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
+            (sample_obs["rgb"].shape[1], sample_obs["rgb"].shape[2])
 
             # here we use a NatureCNN architecture to process images, but any architecture is permissble here
             cnn = nn.Sequential(
@@ -1126,7 +1126,8 @@ if __name__ == "__main__":
             eval_output_dir = f"{os.path.dirname(args.checkpoint)}/test_videos"
         print(f"Saving eval videos to {eval_output_dir}")
         if args.save_train_video_freq is not None:
-            save_video_trigger = lambda x: (x // args.num_steps) % args.save_train_video_freq == 0
+            def save_video_trigger(x):
+                return (x // args.num_steps) % args.save_train_video_freq == 0
             envs = RecordEpisode(
                 envs,
                 output_dir=f"{SAVE_DIR}/{run_name}/{TIME}/train_videos",
