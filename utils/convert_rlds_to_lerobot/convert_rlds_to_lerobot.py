@@ -6,12 +6,18 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
 import numpy as np
 from tqdm import tqdm
+
+# Import the naming helper directly, bypassing mikasa_robo_suite package __init__
+# so this converter can run in a lightweight venv without sapien/mani_skill.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "mikasa_robo_suite" / "vla" / "utils"))
+from dataset_naming import env_id_to_dataset_name  # noqa: E402
 
 # Keep tfds builds quiet on local/offline machines.
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
@@ -30,7 +36,14 @@ def parse_args() -> argparse.Namespace:
         description="Convert RLDS task dataset(s) in data_mikasa_robo/data_rlds/* to LeRobotDataset v3."
     )
     scope = parser.add_mutually_exclusive_group(required=True)
-    scope.add_argument("--task", type=str, help="Convert one RLDS task id.")
+    scope.add_argument(
+        "--task",
+        type=str,
+        help=(
+            "Convert one RLDS task id. Accepts either gym env_id "
+            "('RememberColor3-VLA-v0') or snake_case dataset name ('remember_color_3_vla_v0')."
+        ),
+    )
     scope.add_argument(
         "--all",
         action="store_true",
@@ -92,6 +105,11 @@ def parse_args() -> argparse.Namespace:
         help="Remove existing output directory for each task before conversion.",
     )
     parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip tasks whose output directory already exists instead of failing.",
+    )
+    parser.add_argument(
         "--no-videos",
         action="store_true",
         help="Store image frames directly instead of encoding MP4 videos.",
@@ -136,12 +154,13 @@ def discover_tasks(
     forced_version: str | None,
 ) -> list[TaskPaths]:
     if task:
-        task_dir = rlds_root / task
+        dataset_name = env_id_to_dataset_name(task)
+        task_dir = rlds_root / dataset_name
         if not task_dir.exists():
             raise FileNotFoundError(f"Task not found in RLDS root: {task_dir}")
         return [
             TaskPaths(
-                task_id=task,
+                task_id=dataset_name,
                 rlds_task_dir=task_dir,
                 rlds_version_dir=resolve_version_dir(task_dir, forced_version),
             )
@@ -316,8 +335,9 @@ def convert_one_task(
     robot_type: str,
     use_videos: bool,
     overwrite_dest: bool,
+    skip_existing: bool,
     max_episodes: int | None,
-) -> None:
+) -> bool:
     import tensorflow_datasets as tfds
 
     task = task_paths.task_id
@@ -329,8 +349,14 @@ def convert_one_task(
     if destination_dir.exists():
         if overwrite_dest:
             shutil.rmtree(destination_dir)
+        elif skip_existing:
+            print(f"[{task}] skip: destination already exists -> {destination_dir}")
+            return False
         else:
-            raise FileExistsError(f"Destination already exists: {destination_dir}. Use --overwrite-dest to replace.")
+            raise FileExistsError(
+                f"Destination already exists: {destination_dir}. "
+                "Use --overwrite-dest to replace or --skip-existing to skip."
+            )
 
     builder = tfds.builder_from_directory(str(task_paths.rlds_version_dir))
     ds = builder.as_dataset(split=split)
@@ -375,9 +401,13 @@ def convert_one_task(
                     if destination_dir.exists():
                         if overwrite_dest:
                             shutil.rmtree(destination_dir)
+                        elif skip_existing:
+                            print(f"[{task}] skip: fallback destination already exists -> {destination_dir}")
+                            return False
                         else:
                             raise FileExistsError(
-                                f"Destination already exists: {destination_dir}. Use --overwrite-dest to replace."
+                                f"Destination already exists: {destination_dir}. "
+                                "Use --overwrite-dest to replace or --skip-existing to skip."
                             )
                     lerobot_dataset = create_lerobot_dataset(
                         repo_id=repo_id,
@@ -426,6 +456,7 @@ def convert_one_task(
         shutil.copy2(source_metadata, destination_dir / "source_rlds_metadata.json")
 
     print(f"[{task}] done: episodes={episodes_written}, steps={steps_written}, output={destination_dir}")
+    return True
 
 
 def main() -> None:
@@ -447,8 +478,13 @@ def main() -> None:
     )
     output_root.mkdir(parents=True, exist_ok=True)
 
+    if args.overwrite_dest and args.skip_existing:
+        raise ValueError("--overwrite-dest and --skip-existing are mutually exclusive.")
+
+    converted: list[str] = []
+    skipped: list[str] = []
     for tp in tasks:
-        convert_one_task(
+        did_convert = convert_one_task(
             task_paths=tp,
             output_root=output_root,
             repo_id_template=args.repo_id_template,
@@ -457,8 +493,16 @@ def main() -> None:
             robot_type=args.robot_type,
             use_videos=not args.no_videos,
             overwrite_dest=args.overwrite_dest,
+            skip_existing=args.skip_existing,
             max_episodes=args.max_episodes,
         )
+        (converted if did_convert else skipped).append(tp.task_id)
+
+    print(f"Summary: converted={len(converted)}, skipped={len(skipped)}, total={len(tasks)}")
+    if skipped:
+        print("Skipped tasks:")
+        for t in skipped:
+            print(f"  - {t}")
 
 
 if __name__ == "__main__":

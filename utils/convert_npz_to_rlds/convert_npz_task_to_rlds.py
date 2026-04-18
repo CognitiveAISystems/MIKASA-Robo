@@ -11,13 +11,21 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Import the naming helper directly, bypassing mikasa_robo_suite package __init__
+# so this converter can run in a lightweight venv without sapien/mani_skill.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "mikasa_robo_suite" / "vla" / "utils"))
+from dataset_naming import env_id_to_dataset_name  # noqa: E402
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert MIKASA-Robo-VLA task from .npz episodes to RLDS.")
     parser.add_argument(
         "--task",
         required=True,
-        help="Task folder name under data_mikasa_robo/data_npz (e.g. RememberColor3-VLA-v0).",
+        help=(
+            "Task folder name under data_mikasa_robo/data_npz "
+            "(gym env_id like 'RememberColor3-VLA-v0' or snake_case 'remember_color_3_vla_v0')."
+        ),
     )
     parser.add_argument(
         "--repo-root",
@@ -68,11 +76,12 @@ def run(cmd: list[str], cwd: Path, env: dict[str, str]) -> None:
 def main() -> None:
     args = parse_args()
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parents[2]
+    dataset_name = env_id_to_dataset_name(args.task)
     npz_root = repo_root / args.npz_root
-    task_dir = npz_root / args.task
+    task_dir = npz_root / dataset_name
     builder_dir = repo_root / args.builder_dir
     version_name = "1.0.0"
-    destination_task_dir = repo_root / args.rlds_root / args.task
+    destination_task_dir = repo_root / args.rlds_root / dataset_name
     destination_version_dir = destination_task_dir / version_name
     source_metadata = task_dir / "metadata.json"
     destination_metadata = destination_version_dir / "metadata.json"
@@ -85,7 +94,7 @@ def main() -> None:
         raise FileNotFoundError(f"Builder dir not found: {builder_dir}")
 
     env = os.environ.copy()
-    env["MIKASA_TASK_NAME"] = args.task
+    env["MIKASA_TASK_NAME"] = dataset_name
     try:
         env["MIKASA_NPZ_ROOT"] = str(npz_root.relative_to(repo_root))
     except ValueError:
@@ -97,7 +106,7 @@ def main() -> None:
         tfds_data_dir = Path(args.tfds_data_dir).expanduser().resolve()
         tfds_data_dir.mkdir(parents=True, exist_ok=True)
     else:
-        safe_task = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in args.task)
+        safe_task = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in dataset_name)
         temp_data_dir_obj = tempfile.TemporaryDirectory(prefix=f"mikasa_tfds_{safe_task}_")
         tfds_data_dir = Path(temp_data_dir_obj.name)
 

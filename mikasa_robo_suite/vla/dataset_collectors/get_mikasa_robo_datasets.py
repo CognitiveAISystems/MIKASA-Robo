@@ -18,6 +18,7 @@ from mani_skill.vector.wrappers.gymnasium import ManiSkillVectorEnv
 
 import mikasa_robo_suite.vla.memory_envs  # noqa: F401
 from baselines.ppo.ppo_memtasks import AgentStateOnly, FlattenRGBDObservationWrapper
+from mikasa_robo_suite.vla.utils.dataset_naming import env_id_to_dataset_name
 from mikasa_robo_suite.vla.utils.wrappers import *
 
 DATA_NPZ_DIRNAME = "data_npz"
@@ -484,8 +485,9 @@ def collect_batched_data_from_ckpt(
     agent.load_state_dict(torch.load(checkpoint_path, map_location=device))
     agent.eval()
 
+    dataset_name = env_id_to_dataset_name(env_id)
     _, batched_root = npz_layout_roots(path_to_save_data)
-    save_dir = batched_root / env_id
+    save_dir = batched_root / dataset_name
     save_dir.mkdir(parents=True, exist_ok=True)
 
     print(
@@ -681,9 +683,10 @@ def collect_unbatched_data_from_batched(
     env_id: str = "ShellGameTouch-VLA-v0",
     path_to_save_data: str = "data_mikasa_robo",
 ):
+    dataset_name = env_id_to_dataset_name(env_id)
     npz_root, batched_root = npz_layout_roots(path_to_save_data)
-    batched_dir = batched_root / env_id
-    unbatched_dir = npz_root / env_id
+    batched_dir = batched_root / dataset_name
+    unbatched_dir = npz_root / dataset_name
     unbatched_dir.mkdir(parents=True, exist_ok=True)
 
     batch_files = sorted(batched_dir.glob("train_data_*.npz"))
@@ -770,8 +773,9 @@ def collect_unbatched_data_from_batched(
 
 
 def maybe_remove_empty_batched_dir(env_id: str, path_to_save_data: str = "data_mikasa_robo"):
+    dataset_name = env_id_to_dataset_name(env_id)
     _, batched_root = npz_layout_roots(path_to_save_data)
-    batched_dir = batched_root / env_id
+    batched_dir = batched_root / dataset_name
     if batched_dir.exists() and batched_dir.is_dir() and not any(batched_dir.iterdir()):
         batched_dir.rmdir()
         print(f"Deleted empty batched dir: {batched_dir}")

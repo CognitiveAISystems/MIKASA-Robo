@@ -75,9 +75,21 @@ if [[ ! -f "$PPO_COLLECTOR" || ! -f "$MP_COLLECTOR" ]]; then
   exit 1
 fi
 
+env_id_to_dataset_name() {
+  local env_id="$1"
+  echo "$env_id" \
+    | sed -E 's/([a-z])([A-Z])/\1_\2/g' \
+    | sed -E 's/([A-Z]+)([A-Z][a-z])/\1_\2/g' \
+    | sed -E 's/([a-zA-Z]{2,})([0-9])/\1_\2/g' \
+    | tr '-' '_' \
+    | tr '[:upper:]' '[:lower:]'
+}
+
 existing_unbatched_count() {
   local env_id="$1"
-  local unbatched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/$env_id"
+  local dataset_name
+  dataset_name="$(env_id_to_dataset_name "$env_id")"
+  local unbatched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/$dataset_name"
   if [[ ! -d "$unbatched_dir" ]]; then
     echo 0
     return
@@ -248,7 +260,9 @@ estimate_collected_count() {
     fi
   fi
 
-  local unbatched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/$env_id"
+  local dataset_name
+  dataset_name="$(env_id_to_dataset_name "$env_id")"
+  local unbatched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/$dataset_name"
   local unbatched_count=0
   if [[ -d "$unbatched_dir" ]]; then
     unbatched_count="$(find "$unbatched_dir" -maxdepth 1 -type f -name 'train_data_*.npz' | wc -l | tr -d ' ')"
@@ -256,7 +270,7 @@ estimate_collected_count() {
 
   local total="$unbatched_count"
   if [[ "$method" == "PPO" ]]; then
-    local batched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/_batched/$env_id"
+    local batched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/_batched/$dataset_name"
     local batched_count=0
     if [[ -d "$batched_dir" ]]; then
       batched_count="$(find "$batched_dir" -maxdepth 1 -type f -name 'train_data_batch_*.npz' | wc -l | tr -d ' ')"
@@ -392,8 +406,10 @@ launch_one() {
   local method="$2"
   local gpu_id="$3"
 
-  local env_save_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/$env_id"
-  local env_batched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/_batched/$env_id"
+  local dataset_name
+  dataset_name="$(env_id_to_dataset_name "$env_id")"
+  local env_save_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/$dataset_name"
+  local env_batched_dir="$ROOT_DIR/$PATH_TO_SAVE_DATA/data_npz/_batched/$dataset_name"
   if [[ "$RESET_ENV_DATA" == "1" ]]; then
     rm -rf "$env_save_dir" "$env_batched_dir"
   fi

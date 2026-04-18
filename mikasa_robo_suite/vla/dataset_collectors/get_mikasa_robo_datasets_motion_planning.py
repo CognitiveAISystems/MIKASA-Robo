@@ -15,6 +15,10 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
+from mikasa_robo_suite.vla.utils.dataset_naming import env_id_to_dataset_name  # noqa: E402
+
 DATA_NPZ_DIRNAME = "data_npz"
 BATCHED_TMP_SUBDIR = "_batched"
 
@@ -900,8 +904,9 @@ def collect_batched_motion_planning(
             "No exact match, no Long->short fallback, and no FALLBACK_LANGUAGE entry."
         )
 
+    dataset_name = env_id_to_dataset_name(env_id)
     _, batched_root = npz_layout_roots(path_to_save_data)
-    save_dir = batched_root / env_id
+    save_dir = batched_root / dataset_name
     save_dir.mkdir(parents=True, exist_ok=True)
 
     temp_root = Path(tempfile.mkdtemp(prefix=f"mp_{env_id}_"))
@@ -1064,9 +1069,10 @@ def collect_batched_motion_planning(
 
 
 def collect_unbatched_data_from_batched(env_id: str, path_to_save_data: str):
+    dataset_name = env_id_to_dataset_name(env_id)
     npz_root, batched_root = npz_layout_roots(path_to_save_data)
-    batched_dir = batched_root / env_id
-    unbatched_dir = npz_root / env_id
+    batched_dir = batched_root / dataset_name
+    unbatched_dir = npz_root / dataset_name
     unbatched_dir.mkdir(parents=True, exist_ok=True)
 
     batch_files = _sorted_episode_files(batched_dir)
@@ -1123,8 +1129,9 @@ def collect_unbatched_data_from_batched(env_id: str, path_to_save_data: str):
 
 
 def maybe_remove_empty_batched_dir(env_id: str, path_to_save_data: str):
+    dataset_name = env_id_to_dataset_name(env_id)
     _, batched_root = npz_layout_roots(path_to_save_data)
-    batched_dir = batched_root / env_id
+    batched_dir = batched_root / dataset_name
     if batched_dir.exists() and batched_dir.is_dir() and not any(batched_dir.iterdir()):
         batched_dir.rmdir()
         print(f"Deleted empty batched dir: {batched_dir}")
