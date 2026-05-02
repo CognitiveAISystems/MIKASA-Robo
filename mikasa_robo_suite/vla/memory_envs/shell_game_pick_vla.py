@@ -163,12 +163,19 @@ class ShellGamePickVLABaseEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
+        # See shell_game_push_vla.py for rationale. The red ball is a
+        # purely visual cue (which cup hides the target). Making it
+        # `dynamic`+collidable caused the cup-descent physics to eject
+        # the ball onto a cup lid and made the very first frame look
+        # sunken (collision-mesh sync lagging visual sync). Kinematic +
+        # no collision matches the existing `goal_site` setup.
         self.red_ball = actors.build_sphere(
             self.scene,
             radius=self.BALL_RADIUS,
             color=np.array([255, 0, 0, 255]) / 255,
             name="red_ball",
-            body_type="dynamic",
+            body_type="kinematic",
+            add_collision=False,
             initial_pose=sapien.Pose(p=[0, 0, self.BALL_RADIUS]),
         )
 
@@ -301,13 +308,30 @@ class ShellGamePickVLABaseEnv(BaseEnv):
             new_pose[~hide_mask & (new_pose[..., 2] > 100), 2] -= self.HEIGHT_OFFSET
             mug.pose = new_pose
 
-            ball_on_mug = self.original_poses["ball"][..., 2] >= orig_pose[..., 2]
-            ball_pose = self.original_poses["ball"].clone()
-            ball_pose[ball_on_mug, :3] = self.ball_initial_pose[ball_on_mug, :3]
-
         self.left_mask = (self.cup_with_ball_number == 0).unsqueeze(-1)
         self.center_mask = (self.cup_with_ball_number == 1).unsqueeze(-1)
         self.right_mask = (self.cup_with_ball_number == 2).unsqueeze(-1)
+
+        # Ball-follows-cup. See shell_game_push_vla.py for full rationale.
+        # In the Pick variant the policy lifts the cup with the gripper:
+        # the `cup_at_table` gate ensures we stop tracking once the cup
+        # rises clearly above the table, leaving the ball exposed on the
+        # table at the spot where the cup was sitting (which is the
+        # natural "reveal" for this task).
+        cup_with_ball_p = (
+            self.mug_left.pose.p * self.left_mask
+            + self.mug_center.pose.p * self.center_mask
+            + self.mug_right.pose.p * self.right_mask
+        )  # (B, 3)
+        cup_resting_z = self.object_zs[: self.num_envs]
+        cup_at_table = cup_with_ball_p[..., 2] <= cup_resting_z + 0.05  # (B,)
+        if cup_at_table.any():
+            ball_q = self.original_poses["ball"][..., 3:]
+            new_ball_p = self.original_poses["ball"][..., :3].clone()
+            new_ball_p[cup_at_table, 0] = cup_with_ball_p[cup_at_table, 0]
+            new_ball_p[cup_at_table, 1] = cup_with_ball_p[cup_at_table, 1]
+            new_ball_p[cup_at_table, 2] = self.BALL_RADIUS
+            self.red_ball.set_pose(Pose.create_from_pq(p=new_ball_p, q=ball_q))
         self.obj_to_goal_pos = (
             (self.goal_site.pose.p - self.mug_left.pose.p) * self.left_mask
             + (self.goal_site.pose.p - self.mug_center.pose.p) * self.center_mask

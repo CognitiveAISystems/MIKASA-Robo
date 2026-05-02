@@ -151,12 +151,19 @@ class ShellGameTouchVLABaseEnv(BaseEnv):
         self.mug_center, self._objs_2 = self._initialize_mug(model_ids, id_cup, "center")
         self.mug_right, self._objs_3 = self._initialize_mug(model_ids, id_cup, "right")
 
+        # See shell_game_push_vla.py for rationale. The red ball is a
+        # purely visual cue (which cup hides the target). Making it
+        # `dynamic`+collidable caused the cup-descent physics to eject
+        # the ball onto a cup lid and made the very first frame look
+        # sunken (collision-mesh sync lagging visual sync). Kinematic +
+        # no collision matches the existing `goal_site` setup.
         self.red_ball = actors.build_sphere(
             self.scene,
             radius=self.BALL_RADIUS,
             color=np.array([255, 0, 0, 255]) / 255,
             name="red_ball",
-            body_type="dynamic",
+            body_type="kinematic",
+            add_collision=False,
             initial_pose=sapien.Pose(p=[0, 0, self.BALL_RADIUS]),
         )
 
@@ -287,13 +294,31 @@ class ShellGameTouchVLABaseEnv(BaseEnv):
             new_pose[~hide_mask & (new_pose[..., 2] > 100), 2] -= self.HEIGHT_OFFSET
             mug.pose = new_pose
 
-            ball_on_mug = self.original_poses["ball"][..., 2] >= orig_pose[..., 2]
-            ball_pose = self.original_poses["ball"].clone()
-            ball_pose[ball_on_mug, :3] = self.ball_initial_pose[ball_on_mug, :3]
-
         self.left_mask = (self.cup_with_ball_number == 0).unsqueeze(-1)
         self.center_mask = (self.cup_with_ball_number == 1).unsqueeze(-1)
         self.right_mask = (self.cup_with_ball_number == 2).unsqueeze(-1)
+
+        # Ball-follows-cup. See shell_game_push_vla.py for full rationale.
+        # Kinematic ball is driven explicitly from the hiding cup's xy so
+        # that any cup motion (push / nudge / touch) carries the ball with
+        # it. We only track while the cup is at table height; if it gets
+        # lifted (cue-phase HEIGHT_OFFSET or gripper pick-up) we freeze
+        # the ball at its last-known position so it ends up exposed on the
+        # table, not floating with the cup.
+        cup_with_ball_p = (
+            self.mug_left.pose.p * self.left_mask
+            + self.mug_center.pose.p * self.center_mask
+            + self.mug_right.pose.p * self.right_mask
+        )  # (B, 3)
+        cup_resting_z = self.object_zs[: self.num_envs]
+        cup_at_table = cup_with_ball_p[..., 2] <= cup_resting_z + 0.05  # (B,)
+        if cup_at_table.any():
+            ball_q = self.original_poses["ball"][..., 3:]
+            new_ball_p = self.original_poses["ball"][..., :3].clone()
+            new_ball_p[cup_at_table, 0] = cup_with_ball_p[cup_at_table, 0]
+            new_ball_p[cup_at_table, 1] = cup_with_ball_p[cup_at_table, 1]
+            new_ball_p[cup_at_table, 2] = self.BALL_RADIUS
+            self.red_ball.set_pose(Pose.create_from_pq(p=new_ball_p, q=ball_q))
 
         self.obj_to_goal_pos = torch.zeros_like(
             self.mug_left.pose.p, device=self.mug_left.pose.p.device, dtype=self.mug_left.pose.p.dtype

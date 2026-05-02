@@ -55,7 +55,7 @@ class ShellGamePushVLABaseEnv(BaseEnv):
     HEIGHT_OFFSET = 1000
     CUE_PHASE_STEPS = [1, 5]
     MUG_SCALE = 1.3
-    GOAL_THRESH = 0.05
+    GOAL_THRESH = 0.06  # +20 % vs. the original 0.05 — bigger goal region
 
     def __init__(
         self,
@@ -159,12 +159,24 @@ class ShellGamePushVLABaseEnv(BaseEnv):
         )
         self._hidden_objects.append(self.goal_site)
 
+        # The red ball is a purely visual cue: it tells the human/oracle
+        # which cup hides the target during the cue phase, but the policy
+        # never grasps or manipulates it (success in this task is measured
+        # by where the cup ends up, not the ball). Making it `dynamic` with
+        # collision enabled caused two artefacts: (a) when cups descend at
+        # the cue→manip transition the physics solver ejected the ball
+        # upward onto a cup lid, and (b) at the very first frame the
+        # collision-mesh sync lagged the visual sync, making the cup look
+        # sunken into the table. `body_type="kinematic" + add_collision=False`
+        # mirrors the existing `goal_site` config — pose is authoritative,
+        # physics can't move it.
         self.red_ball = actors.build_sphere(
             self.scene,
             radius=self.BALL_RADIUS,
             color=np.array([255, 0, 0, 255]) / 255,
             name="red_ball",
-            body_type="dynamic",
+            body_type="kinematic",
+            add_collision=False,
             initial_pose=sapien.Pose(p=[0, 0, self.BALL_RADIUS]),
         )
 
@@ -285,13 +297,34 @@ class ShellGamePushVLABaseEnv(BaseEnv):
             new_pose[~hide_mask & (new_pose[..., 2] > 100), 2] -= self.HEIGHT_OFFSET
             mug.pose = new_pose
 
-            ball_on_mug = self.original_poses["ball"][..., 2] >= orig_pose[..., 2]
-            ball_pose = self.original_poses["ball"].clone()
-            ball_pose[ball_on_mug, :3] = self.ball_initial_pose[ball_on_mug, :3]
-
         self.left_mask = (self.cup_with_ball_number == 0).unsqueeze(-1)
         self.center_mask = (self.cup_with_ball_number == 1).unsqueeze(-1)
         self.right_mask = (self.cup_with_ball_number == 2).unsqueeze(-1)
+
+        # Ball-follows-cup. The kinematic red_ball doesn't respond to
+        # physics, so we drive its xy from the hiding cup explicitly:
+        # while the cup is at table height the ball tracks it (so when the
+        # robot pushes the cup, the ball is carried along, exactly as if
+        # tucked underneath); when the cup is clearly off the table (cue
+        # phase lift, or gripper pick-up in the Pick variant) we leave the
+        # ball where it last was. Ball.z is pinned to BALL_RADIUS so it
+        # always sits on the table surface.
+        cup_with_ball_p = (
+            self.mug_left.pose.p * self.left_mask
+            + self.mug_center.pose.p * self.center_mask
+            + self.mug_right.pose.p * self.right_mask
+        )  # (B, 3) — pose of the cup hiding the ball, post-step
+        # All three cups share the same model, so object_zs[:num_envs]
+        # gives the cup's natural resting z per env.
+        cup_resting_z = self.object_zs[: self.num_envs]
+        cup_at_table = cup_with_ball_p[..., 2] <= cup_resting_z + 0.05  # (B,)
+        if cup_at_table.any():
+            ball_q = self.original_poses["ball"][..., 3:]
+            new_ball_p = self.original_poses["ball"][..., :3].clone()
+            new_ball_p[cup_at_table, 0] = cup_with_ball_p[cup_at_table, 0]
+            new_ball_p[cup_at_table, 1] = cup_with_ball_p[cup_at_table, 1]
+            new_ball_p[cup_at_table, 2] = self.BALL_RADIUS
+            self.red_ball.set_pose(Pose.create_from_pq(p=new_ball_p, q=ball_q))
 
         self.obj_to_goal_pos = torch.zeros_like(
             self.mug_left.pose.p, device=self.mug_left.pose.p.device, dtype=self.mug_left.pose.p.dtype
@@ -304,7 +337,7 @@ class ShellGamePushVLABaseEnv(BaseEnv):
         )
 
         self.is_obj_placed = torch.linalg.norm(self.obj_to_goal_pos, axis=1) <= self.GOAL_THRESH * 1.6
-        self.is_robot_static = self.agent.is_static(0.2)
+        self.is_robot_static = self.agent.is_static(0.3)
 
         return dict(
             obj_to_goal_pos=self.obj_to_goal_pos,
@@ -376,6 +409,7 @@ class ShellGamePushVLABaseEnv(BaseEnv):
         self.reward_dict = {
             "reaching_reward": reaching_reward,
             "static_reward": static_reward,
+            "is_robot_static": self.is_robot_static,
             "place_reward": place_reward,
             "tcp_to_obj_dist": tcp_to_obj_dist,
             "obj_to_goal_dist": obj_to_goal_dist,

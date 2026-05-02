@@ -47,6 +47,12 @@ class RememberShapeVLABaseEnv(BaseEnv):
     GOAL_THRESH = 0.05
     SHAPE_SCALE = 0.02
     COLOR = [0, 0, 255, 255]
+    # Number of steps to freeze object velocities after shapes teleport onto the
+    # table (start of manipulation phase). Without this, Sapien GPU contact
+    # resolution needs 1-2 solver iterations to settle the z-contact, during
+    # which gravity pulls the objects slightly below their target z, producing
+    # a visible "fall from above the table" artefact.
+    APPEAR_SETTLE_STEPS = 3
 
     SHAPE_MAPPING = {
         0: "cube",
@@ -141,8 +147,13 @@ class RememberShapeVLABaseEnv(BaseEnv):
 
         color = np.array(self.COLOR) / 255.0
         self.shape_actors = {}
+        self.shape_resting_z = {}
         for key, shape_name in self.shape_dict.items():
             self.shape_actors[key] = self._build_shape_actor(shape_name, key, color)
+            actor_q = self._get_shape_quaternion(shape_name)
+            self.shape_resting_z[key] = self._compute_actor_resting_z(
+                self.shape_actors[key], actor_q
+            )
 
     def _ensure_phase_buffers(self, env_idx: torch.Tensor):
         target_size = int(env_idx.max().item()) + 1
@@ -165,6 +176,68 @@ class RememberShapeVLABaseEnv(BaseEnv):
             return [0.7071068, 0, 0.7071068, 0]
         return [1, 0, 0, 0]
 
+    @staticmethod
+    def _quat_to_rotmat(q):
+        """sapien (w, x, y, z) → 3x3 rotation matrix."""
+        w, x, y, z = float(q[0]), float(q[1]), float(q[2]), float(q[3])
+        return np.array(
+            [
+                [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+            ],
+            dtype=np.float64,
+        )
+
+    def _compute_actor_resting_z(self, actor, actor_quat) -> float:
+        """Z-coordinate of the actor's origin such that the lowest collision
+        point sits exactly at z=0 in world frame, assuming the actor is rotated
+        by `actor_quat` (sapien w,x,y,z).
+
+        Probes the actor's actual collision-shape geometry rather than relying
+        on hardcoded per-shape constants. Necessary because shapes like torus
+        and crescent build their collision primitives from vertically-rotated
+        cylinder segments where the world-frame z extent is `half_length`
+        (≈ 2π·radius / segments / 2), not `radius` as one might naively expect.
+        """
+        obj = actor._objs[0] if hasattr(actor, "_objs") else actor
+        body = obj.find_component_by_type(sapien.physx.PhysxRigidDynamicComponent)
+        if body is None:
+            return self.SHAPE_SCALE
+
+        actor_R = self._quat_to_rotmat(actor_quat)
+        min_z = float("inf")
+        for shape in body.collision_shapes:
+            local_pose = shape.local_pose
+            if hasattr(shape, "half_size"):
+                hs = np.array(shape.half_size, dtype=np.float64)
+            elif hasattr(shape, "half_length") and hasattr(shape, "radius"):
+                # Sapien cylinder: default along X axis with given half_length & radius.
+                hs = np.array([shape.half_length, shape.radius, shape.radius], dtype=np.float64)
+            elif hasattr(shape, "radius"):
+                r = float(shape.radius)
+                hs = np.array([r, r, r], dtype=np.float64)
+            else:
+                continue
+
+            local_R = self._quat_to_rotmat(local_pose.q)
+            corners = np.array(
+                [
+                    [sx * hs[0], sy * hs[1], sz * hs[2]]
+                    for sx in (-1, 1)
+                    for sy in (-1, 1)
+                    for sz in (-1, 1)
+                ],
+                dtype=np.float64,
+            )
+            local_world = corners @ local_R.T + np.array(local_pose.p, dtype=np.float64)
+            actor_world = local_world @ actor_R.T
+            min_z = min(min_z, float(actor_world[:, 2].min()))
+
+        if min_z == float("inf"):
+            return self.SHAPE_SCALE
+        return -min_z
+
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
             b = len(env_idx)
@@ -182,9 +255,14 @@ class RememberShapeVLABaseEnv(BaseEnv):
             )
 
             xyz_initial = torch.zeros((b, 3))
-            self.center_pose = xyz_initial.clone()
-            self.center_pose[..., 2] = self.SHAPE_SCALE
-            self.center_pose = self.center_pose[0].unsqueeze(0)
+            # Per-shape center pose: z is the actor-specific resting height
+            # (computed from collision geometry in _load_scene) so the shape
+            # sits flush on the table when shown at the cue (xy=0,0).
+            self.center_pose = {}
+            for key in self.shape_dict:
+                cp = xyz_initial.clone()
+                cp[..., 2] = self.shape_resting_z[key]
+                self.center_pose[key] = cp[0].unsqueeze(0)
 
             for key, shape_name in self.shape_dict.items():
                 xyz = xyz_initial.clone()
@@ -197,7 +275,10 @@ class RememberShapeVLABaseEnv(BaseEnv):
                         xyz[..., 1] -= (key - (len(self.shape_dict) // 2)) * 0.025
                 else:
                     xyz[..., 1] -= (key - (len(self.shape_dict) // 2)) * 0.1
-                xyz[..., 2] = self.SHAPE_SCALE
+                # Per-shape z: probed from collision geometry so each shape's
+                # bottom touches the table exactly. Using SHAPE_SCALE for all
+                # shapes would leave short ones (cross/torus/…) hovering.
+                xyz[..., 2] = self.shape_resting_z[key]
                 q = self._get_shape_quaternion(shape_name)
                 self.shape_actors[key].set_pose(Pose.create_from_pq(p=xyz, q=q))
                 self.initial_poses[key] = xyz.clone()
@@ -219,9 +300,16 @@ class RememberShapeVLABaseEnv(BaseEnv):
                         attempt += 1
                 shuffled_indices = torch.randperm(len(positions))
                 for key, idx in zip(self.initial_poses, shuffled_indices):
-                    self.initial_poses[key][env_i] = positions[idx]
+                    # Take only x,y from the shuffled position; z must remain
+                    # the *destination* shape's resting z. With per-shape
+                    # resting heights, shuffling the full (x,y,z) tuple would
+                    # mix z values across shapes (e.g. cube ends up at the
+                    # cross's z and visibly hovers/penetrates the table).
+                    new_pos = positions[idx].clone()
+                    new_pos[2] = self.shape_resting_z[key]
+                    self.initial_poses[key][env_i] = new_pos
                     pose = self.shape_actors[key].pose.raw_pose.clone()
-                    pose[env_i, :3] = positions[idx]
+                    pose[env_i, :3] = new_pos
                     self.shape_actors[key].pose = pose
 
             self.oracle_info = self.true_shape_indices
@@ -321,17 +409,29 @@ class RememberShapeVLABaseEnv(BaseEnv):
         for key in self.shape_dict:
             true_mask = self.true_shape_indices == key
             b_ = hidden_poses[key].shape[0]
-            hidden_poses[key][true_mask & hidden_phase_mask, :3] = self.center_pose.repeat(b_, 1)[
+            hidden_poses[key][true_mask & hidden_phase_mask, :3] = self.center_pose[key].repeat(b_, 1)[
                 true_mask & hidden_phase_mask, :3
             ]
             hidden_poses[key][true_mask & empty_mask, 2] = 1000
             self.shape_actors[key].pose = hidden_poses[key]
 
+        # Freeze velocities AND re-pin pose for APPEAR_SETTLE_STEPS steps after
+        # shapes teleport onto the table. Without re-pinning the pose every
+        # settle step, GPU contact resolution shifts each shape by a small
+        # delta (different sign per shape due to different inertia tensors)
+        # — short shapes end up visibly above or below the table for the
+        # first 1-2 frames. Re-applying initial_poses every settle step keeps
+        # the visual flush; the pinning stops once the solver is converged.
+        settle_mask = manip_mask & (elapsed_steps < empty_end + self.APPEAR_SETTLE_STEPS)
+
         for key in self.shape_dict:
-            hidden_poses[key][appeared_mask, :3] = self.initial_poses[key][appeared_mask, :3]
+            # Re-pin xyz on every step in the settle window (NOT just on the
+            # first appeared step) so contact-solver drift can't push the
+            # shape off the table surface visibly.
+            hidden_poses[key][settle_mask, :3] = self.initial_poses[key][settle_mask, :3]
             self.shape_actors[key].pose = hidden_poses[key]
 
-            lock_mask = hidden_phase_mask | appeared_mask
+            lock_mask = hidden_phase_mask | settle_mask
             if bool(lock_mask.any().item()):
                 lin_vel = self.shape_actors[key].linear_velocity.clone()
                 ang_vel = self.shape_actors[key].angular_velocity.clone()

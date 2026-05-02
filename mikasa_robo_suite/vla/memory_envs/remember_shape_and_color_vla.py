@@ -49,6 +49,10 @@ class RememberShapeAndColorVLABaseEnv(BaseEnv):
 
     GOAL_THRESH = 0.05
     SHAPE_SCALE = 0.02
+    # Steps to freeze velocity AND re-pin pose after shapes teleport onto the
+    # table — gives the contact solver time to settle without visible drift
+    # (different shapes have different inertia tensors → different drift sign).
+    APPEAR_SETTLE_STEPS = 3
 
     BASE_SHAPES = {
         0: "cube",
@@ -140,13 +144,78 @@ class RememberShapeAndColorVLABaseEnv(BaseEnv):
             raise NotImplementedError(shape_name)
         return builders[shape_name]()
 
+    @staticmethod
+    def _quat_to_rotmat(q):
+        """sapien (w, x, y, z) → 3x3 rotation matrix."""
+        w, x, y, z = float(q[0]), float(q[1]), float(q[2]), float(q[3])
+        return np.array(
+            [
+                [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+            ],
+            dtype=np.float64,
+        )
+
+    def _compute_actor_resting_z(self, actor, actor_quat) -> float:
+        """Z-coordinate of the actor's origin such that the lowest collision
+        point sits exactly at z=0 in world frame, assuming the actor is rotated
+        by `actor_quat` (sapien w,x,y,z). Probes actual collision geometry
+        instead of relying on per-shape constants — necessary because shapes
+        like torus are built from cylinder segments whose world-frame z extent
+        is `half_length` (≈ 2π·radius / segments / 2), not `radius`.
+        """
+        obj = actor._objs[0] if hasattr(actor, "_objs") else actor
+        body = obj.find_component_by_type(sapien.physx.PhysxRigidDynamicComponent)
+        if body is None:
+            return self.SHAPE_SCALE
+
+        actor_R = self._quat_to_rotmat(actor_quat)
+        min_z = float("inf")
+        for shape in body.collision_shapes:
+            local_pose = shape.local_pose
+            if hasattr(shape, "half_size"):
+                hs = np.array(shape.half_size, dtype=np.float64)
+            elif hasattr(shape, "half_length") and hasattr(shape, "radius"):
+                hs = np.array([shape.half_length, shape.radius, shape.radius], dtype=np.float64)
+            elif hasattr(shape, "radius"):
+                r = float(shape.radius)
+                hs = np.array([r, r, r], dtype=np.float64)
+            else:
+                continue
+
+            local_R = self._quat_to_rotmat(local_pose.q)
+            corners = np.array(
+                [
+                    [sx * hs[0], sy * hs[1], sz * hs[2]]
+                    for sx in (-1, 1)
+                    for sy in (-1, 1)
+                    for sz in (-1, 1)
+                ],
+                dtype=np.float64,
+            )
+            local_world = corners @ local_R.T + np.array(local_pose.p, dtype=np.float64)
+            actor_world = local_world @ actor_R.T
+            min_z = min(min_z, float(actor_world[:, 2].min()))
+
+        if min_z == float("inf"):
+            return self.SHAPE_SCALE
+        return -min_z
+
     def _load_scene(self, options: dict):
         self.table_scene = TableSceneBuilder(self, robot_init_qpos_noise=self.robot_init_qpos_noise)
         self.table_scene.build()
 
         self.shape_actors = {}
+        self.shape_resting_z = {}
+        # Actors in this env are always set with identity quaternion in
+        # _initialize_episode (q=[1,0,0,0]); pass that to the resting-z probe.
+        identity_q = [1, 0, 0, 0]
         for key, info in self.shape_color_dict.items():
             self.shape_actors[key] = self._build_shape_actor(info["shape"], key, info["color"])
+            self.shape_resting_z[key] = self._compute_actor_resting_z(
+                self.shape_actors[key], identity_q
+            )
 
     def _ensure_phase_buffers(self, env_idx: torch.Tensor):
         target_size = int(env_idx.max().item()) + 1
@@ -189,9 +258,14 @@ class RememberShapeAndColorVLABaseEnv(BaseEnv):
             )
 
             xyz_initial = torch.zeros((b, 3))
-            self.center_pose = xyz_initial.clone()
-            self.center_pose[..., 2] = self.SHAPE_SCALE
-            self.center_pose = self.center_pose[0].unsqueeze(0)
+            # Per-shape center pose: z is the actor-specific resting height
+            # (probed from collision geometry in _load_scene) so the cue shape
+            # sits flush on the table regardless of its geometry.
+            self.center_pose = {}
+            for key in self.shape_color_dict:
+                cp = xyz_initial.clone()
+                cp[..., 2] = self.shape_resting_z[key]
+                self.center_pose[key] = cp[0].unsqueeze(0)
 
             n = len(self.shape_color_dict)
             for key in self.shape_color_dict:
@@ -205,7 +279,10 @@ class RememberShapeAndColorVLABaseEnv(BaseEnv):
                 xyz[..., 1] = radius * np.sin(angle)
                 if n % 2 != 0 and self.SHAPES in [5, 9]:
                     xyz[..., 1] -= (key - (n // 2)) * 0.025
-                xyz[..., 2] = self.SHAPE_SCALE
+                # Per-shape z: each shape has a different half-height from
+                # origin; using SHAPE_SCALE for everything would leave short
+                # shapes (cross/torus/t_shape) hovering above the table.
+                xyz[..., 2] = self.shape_resting_z[key]
                 self.shape_actors[key].set_pose(Pose.create_from_pq(p=xyz, q=[1, 0, 0, 0]))
                 self.initial_poses[key] = xyz.clone()
 
@@ -238,9 +315,16 @@ class RememberShapeAndColorVLABaseEnv(BaseEnv):
                 best_positions = best_positions[perm]
 
                 for key, new_pos in zip(self.initial_poses, best_positions):
-                    self.initial_poses[key][env_i] = new_pos
+                    # Take only x,y from the shuffled position; z must remain
+                    # this shape's resting z. With per-shape resting heights,
+                    # shuffling the full (x,y,z) tuple would mix z values
+                    # across shapes (e.g. cube ends up at the cross's z and
+                    # visibly hovers/penetrates the table).
+                    fixed_pos = new_pos.clone()
+                    fixed_pos[2] = self.shape_resting_z[key]
+                    self.initial_poses[key][env_i] = fixed_pos
                     pose = self.shape_actors[key].pose.raw_pose.clone()
-                    pose[env_i, :3] = new_pos
+                    pose[env_i, :3] = fixed_pos
                     self.shape_actors[key].pose = pose
 
             self.oracle_info = torch.stack([self.true_shapes_info, self.true_colors_info], dim=1)
@@ -338,17 +422,23 @@ class RememberShapeAndColorVLABaseEnv(BaseEnv):
         for key in self.shape_color_dict:
             true_mask = self.true_shape_indices == key
             b_ = hidden_poses[key].shape[0]
-            hidden_poses[key][true_mask & hidden_phase_mask, :3] = self.center_pose.repeat(b_, 1)[
+            hidden_poses[key][true_mask & hidden_phase_mask, :3] = self.center_pose[key].repeat(b_, 1)[
                 true_mask & hidden_phase_mask, :3
             ]
             hidden_poses[key][true_mask & empty_mask, 2] = 1000
             self.shape_actors[key].pose = hidden_poses[key]
 
+        # Re-pin pose AND zero velocity for APPEAR_SETTLE_STEPS steps after
+        # shapes teleport onto the table. Without re-pinning every settle step,
+        # the GPU contact solver shifts shapes by a small per-shape delta that
+        # is visible for the first 1-2 frames of the manipulation phase.
+        settle_mask = manip_mask & (elapsed_steps < empty_end + self.APPEAR_SETTLE_STEPS)
+
         for key in self.shape_color_dict:
-            hidden_poses[key][appeared_mask, :3] = self.initial_poses[key][appeared_mask, :3]
+            hidden_poses[key][settle_mask, :3] = self.initial_poses[key][settle_mask, :3]
             self.shape_actors[key].pose = hidden_poses[key]
 
-            lock_mask = hidden_phase_mask | appeared_mask
+            lock_mask = hidden_phase_mask | settle_mask
             if bool(lock_mask.any().item()):
                 lin_vel = self.shape_actors[key].linear_velocity.clone()
                 ang_vel = self.shape_actors[key].angular_velocity.clone()
