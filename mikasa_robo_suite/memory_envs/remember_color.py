@@ -194,9 +194,9 @@ class RememberColorBaseEnv(BaseEnv):
             else:
                 raise NotImplementedError(self.robot_uids)
 
-    def evaluate(self):
         self.original_poses = {key: self.cubes[key].pose.raw_pose.clone() for key in self.cubes.keys()}
-        
+
+    def evaluate(self):
         hidden_shapes_poses = {}
         for key, shape in self.color_dict.items():
             hidden_shapes_poses[key] = self.cubes[key].pose.raw_pose.clone()
