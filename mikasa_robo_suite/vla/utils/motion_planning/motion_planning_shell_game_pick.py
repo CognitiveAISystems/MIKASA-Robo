@@ -97,8 +97,8 @@ def _elapsed_from_info(info):
 def _validate_flatten_obs(obs):
     if not isinstance(obs, dict):
         raise RuntimeError(f"Expected dict observation, got {type(obs).__name__}.")
-    if "rgb" not in obs or "joints" not in obs:
-        raise RuntimeError("Missing 'rgb'/'joints' keys in observation.")
+    if "rgb" not in obs or "proprio" not in obs:
+        raise RuntimeError("Missing 'rgb'/'proprio' keys in observation.")
 
 
 def build_hold_action_pd_joint_pos(base_env, gripper_state_override: float | None = None):

@@ -91,7 +91,7 @@ class BunchOfColorsEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             # Reset touched cubes tracking
@@ -316,7 +316,7 @@ class BunchOfColorsEnv(BaseEnv):
             "obj_to_goal_pos": self.obj_to_goal_pos,
             "is_robot_static": is_robot_static,
             "success": success,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,
         }

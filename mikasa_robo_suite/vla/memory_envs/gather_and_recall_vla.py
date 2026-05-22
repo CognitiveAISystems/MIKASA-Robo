@@ -294,7 +294,7 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
             env_idx = env_idx.to(self.device)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             # ── Reset state ──────────────────────────────────────────────
@@ -602,7 +602,7 @@ class GatherAndRecallVLABaseEnv(BaseEnv):
             "flash_color": self.flash_color,
             "pressed_button": self.pressed_button,
             "obj_to_goal_pos": obj_to_goal,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

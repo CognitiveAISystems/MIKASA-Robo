@@ -267,7 +267,7 @@ class ShellGameShuffleColorLampTouchVLABaseEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             xyz = torch.zeros((b, 3), device=self.device)
@@ -365,7 +365,7 @@ class ShellGameShuffleColorLampTouchVLABaseEnv(BaseEnv):
             local_target_color = self.target_color[env_idx]
             final_target_slot = slot_of_mug_all[batch_r, num_swaps, local_target_color]
             self.oracle_info = final_target_slot.to(torch.uint8)
-            self.prompt = local_target_color.to(torch.uint8)
+            self.task_cue = local_target_color.to(torch.uint8)
 
     def evaluate(self):
         elapsed = self.elapsed_steps.to(torch.int64)
@@ -465,7 +465,7 @@ class ShellGameShuffleColorLampTouchVLABaseEnv(BaseEnv):
             "is_obj_placed": self.is_obj_placed,
             "is_robot_static": self.is_robot_static,
             "success": success,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

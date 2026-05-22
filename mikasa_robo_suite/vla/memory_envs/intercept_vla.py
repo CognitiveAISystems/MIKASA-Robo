@@ -112,7 +112,7 @@ class InterceptVLABaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             xyz = torch.zeros((b, 3))
@@ -162,7 +162,7 @@ class InterceptVLABaseEnv(BaseEnv):
 
         return {
             "success": is_obj_placed,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

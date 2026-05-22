@@ -36,6 +36,7 @@ events.out.tfevents.*
 
 *.json
 *.csv
+!mikasa_robo_vla_envs.csv
 *.xlsx
 *.xls
 
@@ -79,5 +80,7 @@ upload.ipynb
 .uv_cache
 
 # Docs
-docs
-.readthedocs.yaml
+docs/_build/
+
+eval_results/
+my_docs/

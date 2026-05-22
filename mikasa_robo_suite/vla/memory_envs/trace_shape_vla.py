@@ -316,7 +316,7 @@ class TraceShapeVLABaseEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
             env_idx = env_idx.to(self.device)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             # ---- Sample shape type ----
@@ -401,7 +401,7 @@ class TraceShapeVLABaseEnv(BaseEnv):
             for aux in self._lamp_aux:
                 aux.set_pose(Pose.create_from_pq(p=lamp_off, q=lamp_q))
 
-            # ---- Oracle / prompt ----
+            # ---- Oracle / task_cue ----
             self.oracle_info = self.shape_type[env_idx].to(torch.uint8)
 
             # ---- Reset robot ----
@@ -498,7 +498,7 @@ class TraceShapeVLABaseEnv(BaseEnv):
             "start_checkpoint_dist": start_checkpoint_dist,
             "checkpoint_visited": self.checkpoint_visited,
             "obj_to_goal_pos": self.obj_to_goal_pos,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

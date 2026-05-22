@@ -145,7 +145,7 @@ class TakeItBackVLABaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             initial_positions = torch.from_numpy(self._batched_episode_rng.choice([-1, 0, 1])).to(self.device)
@@ -233,7 +233,7 @@ class TakeItBackVLABaseEnv(BaseEnv):
 
         return {
             "success": is_cube_returned & self.goal_reached_status,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "goal_achieved": self.goal_achieved,

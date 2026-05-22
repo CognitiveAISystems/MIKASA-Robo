@@ -156,7 +156,7 @@ class RememberShapeAndColorBaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             self.true_shape_indices = self._batched_episode_rng.choice(list(self.shape_color_dict.keys()))
@@ -323,7 +323,7 @@ class RememberShapeAndColorBaseEnv(BaseEnv):
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
             "success": is_obj_placed & is_robot_static,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,
         }

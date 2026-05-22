@@ -508,7 +508,7 @@ class TraceShapeSeqVLABaseEnv(BaseEnv):
             self.button_cap.set_pose(Pose.create_from_pq(p=button_cap_xyz, q=button_cap_q))
 
             self.oracle_info = self.shape_sequence.to(torch.int64)
-            self.prompt = self.shape_sequence.to(torch.int64)
+            self.task_cue = self.shape_sequence.to(torch.int64)
 
             if self.robot_uids in ("panda", "panda_wristcam"):
                 qpos = np.array([0.0, 0, 0, -np.pi * 2 / 3, 0, np.pi * 2 / 3, np.pi / 4, 0.04, 0.04])
@@ -690,7 +690,7 @@ class TraceShapeSeqVLABaseEnv(BaseEnv):
             "xy_dist_to_button": xy_dist_to_button,
             "submit_success_latched": self.submit_success_latched,
             "obj_to_goal_pos": self.obj_to_goal_pos,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

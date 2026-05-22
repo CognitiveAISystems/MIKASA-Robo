@@ -1,0 +1,91 @@
+id;Name;Max Length;Memory Type;Horizon Split;Data Source;language_instruction
+0;ShellGameTouch-VLA-v0;30;Spatial;Short;PPO;Observe which cup hides the ball, wait, then touch that cup.
+1;ShellGamePush-VLA-v0;30;Spatial;Short;PPO;Observe which cup hides the ball, wait, then push that cup forward.
+2;InterceptSlow-VLA-v0;60;Spatial;Short;PPO;Intercept the rolling ball by moving to its path and deflecting it toward the target.
+3;InterceptMedium-VLA-v0;60;Spatial;Short;PPO;Intercept the rolling ball by moving to its path and deflecting it toward the target.
+4;InterceptFast-VLA-v0;60;Spatial;Short;PPO;Intercept the rolling ball by moving to its path and deflecting it toward the target.
+5;InterceptGrabSlow-VLA-v0;60;Spatial;Short;PPO;Intercept the rolling ball and grasp it to stop it.
+6;InterceptGrabMedium-VLA-v0;60;Spatial;Short;PPO;Intercept the rolling ball and grasp it to stop it.
+7;InterceptGrabFast-VLA-v0;60;Spatial;Short;PPO;Intercept the rolling ball and grasp it to stop it.
+8;RotateLenientPos-VLA-v0;60;Spatial;Short;PPO;Rotate the peg by {angle_deg} degrees to match the target angle.
+9;RotateLenientPosNeg-VLA-v0;60;Spatial;Short;PPO;Rotate the peg by {angle_deg} degrees to match the target angle.
+10;RotateStrictPos-VLA-v0;90;Spatial;Short;PPO;Rotate the peg by {angle_deg} degrees to match the target angle while keeping the center of the peg in place.
+11;RotateStrictPosNeg-VLA-v0;90;Spatial;Short;PPO;Rotate the peg by {angle_deg} degrees to match the target angle while keeping the center of the peg in place.
+12;TakeItBack-VLA-v0;60;Spatial;Short;PPO;Push the cube onto the red target, and when the target changes color, return the cube to its original position.
+13;RememberColor3-VLA-v0;25;Object;Short;PPO;Observe the cube's color, wait, then touch the cube of the same color.
+14;RememberColor5-VLA-v0;25;Object;Short;PPO;Observe the cube's color, wait, then touch the cube of the same color.
+15;RememberColor9-VLA-v0;25;Object;Short;PPO;Observe the cube's color, wait, then touch the cube of the same color.
+16;RememberShape3-VLA-v0;25;Object;Short;PPO;Observe the object's shape, wait, then touch the object of the same shape.
+17;RememberShape5-VLA-v0;25;Object;Short;PPO;Observe the object's shape, wait, then touch the object of the same shape.
+18;RememberShape9-VLA-v0;25;Object;Short;PPO;Observe the object's shape, wait, then touch the object of the same shape.
+19;RememberShapeAndColor3x2-VLA-v0;25;Object;Short;PPO;Observe the object's shape and color, wait, then touch the object of the same shape and color.
+20;RememberShapeAndColor3x3-VLA-v0;25;Object;Short;PPO;Observe the object's shape and color, wait, then touch the object of the same shape and color.
+21;RememberShapeAndColor5x3-VLA-v0;25;Object;Short;PPO;Observe the object's shape and color, wait, then touch the object of the same shape and color.
+22;BunchOfColors3-VLA-v0;400;Capacity;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+23;BunchOfColors5-VLA-v0;400;Capacity;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+24;BunchOfColors7-VLA-v0;400;Capacity;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+25;SeqOfColors3-VLA-v0;400;Capacity;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+26;SeqOfColors5-VLA-v0;400;Capacity;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+27;SeqOfColors7-VLA-v0;400;Capacity;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+28;ChainOfColors3-VLA-v0;400;Sequential;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in the same order as the cubes were shown and press the center button.
+29;ChainOfColors5-VLA-v0;400;Sequential;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in the same order as the cubes were shown and press the center button.
+30;ChainOfColors7-VLA-v0;400;Sequential;Medium;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in the same order as the cubes were shown and press the center button.
+31;ShellGameShuffleTouch-VLA-v0;60;Tracking;Short;PPO;Observe which cup hides the ball, track the cups as they shuffle, then touch the correct cup.
+32;ShellGameShuffleColorLampTouch-VLA-v0;60;Tracking;Short;PPO;Observe which color is under each cup, track the cups as they shuffle, then touch the cup matching the lamp color.
+33;ShellGameColorLampTouch-VLA-v0;30;Spatial;Short;PPO;Observe which color is under each cup, then touch the cup matching the lamp color.
+34;FindImposterColor3-VLA-v0;25;Negative;Short;PPO;Observe the cubes shown, wait, then touch the cube whose color was not present before.
+35;FindImposterColor5-VLA-v0;25;Negative;Short;PPO;Observe the cubes shown, wait, then touch the cube whose color was not present before.
+36;FindImposterColor9-VLA-v0;25;Negative;Short;PPO;Observe the cubes shown, wait, then touch the cube whose color was not present before.
+37;FindImposterShape3-VLA-v0;25;Negative;Short;PPO;Observe the shapes shown, wait, then touch the object whose shape was not present before.
+38;FindImposterShape5-VLA-v0;25;Negative;Short;PPO;Observe the shapes shown, wait, then touch the object whose shape was not present before.
+39;FindImposterShape9-VLA-v0;25;Negative;Short;PPO;Observe the shapes shown, wait, then touch the object whose shape was not present before.
+40;FindImposterShapeAndColor3x2-VLA-v0;25;Negative;Short;PPO;Observe the objects shown, wait, then touch the object whose shape and color combination was not present before.
+41;FindImposterShapeAndColor3x3-VLA-v0;25;Negative;Short;PPO;Observe the objects shown, wait, then touch the object whose shape and color combination was not present before.
+42;FindImposterShapeAndColor5x3-VLA-v0;25;Negative;Short;PPO;Observe the objects shown, wait, then touch the object whose shape and color combination was not present before.
+43;BatteriesCheckerEasy-3-VLA-v0;540;Checklist;Medium;MP;Find all working batteries by inserting each one into the socket, observing the lamp result, and then pressing the button to confirm.
+44;BatteriesCheckerEasy-6-VLA-v0;1080;Checklist;Long;MP;Find all working batteries by inserting each one into the socket, observing the lamp result, and then pressing the button to confirm.
+45;BatteriesCheckerHard-3-VLA-v0;1080;Checklist;Long;MP;Find all working batteries by inserting each one into the socket, observing the lamp result, returning it from the socket to its initial slot, and then pressing the button to confirm.
+46;BatteriesCheckerHard-6-VLA-v0;2160;Checklist;Long;MP;Find all working batteries by inserting each one into the socket, observing the lamp result, returning it from the socket to its initial slot, and then pressing the button to confirm.
+47;BlinkCountButtonPressEasy-VLA-v0;150;Temporal;Short;MP;Count how many times the blue lamp blinks, press the red button exactly that many times when the red lamp turns green, then press the black button to submit your answer.
+48;BlinkCountButtonPressMedium-VLA-v0;200;Temporal;Short;MP;Count how many times the blue lamp blinks, press the red button exactly that many times when the red lamp turns green, then press the black button to submit your answer.
+49;BlinkCountButtonPressHard-VLA-v0;300;Temporal;Medium;MP;Count how many times the blue lamp blinks, press the red button exactly that many times when the red lamp turns green, then press the black button to submit your answer.
+50;RememberColor3-Long-VLA-v0;600;Object;Medium;MP;Observe the cube's color, wait, then touch the cube of the same color.
+51;RememberColor5-Long-VLA-v0;600;Object;Medium;MP;Observe the cube's color, wait, then touch the cube of the same color.
+52;RememberColor9-Long-VLA-v0;600;Object;Medium;MP;Observe the cube's color, wait, then touch the cube of the same color.
+53;RememberShape3-Long-VLA-v0;600;Object;Medium;MP;Observe the object's shape, wait, then touch the object of the same shape.
+54;RememberShape5-Long-VLA-v0;600;Object;Medium;MP;Observe the object's shape, wait, then touch the object of the same shape.
+55;RememberShape9-Long-VLA-v0;600;Object;Medium;MP;Observe the object's shape, wait, then touch the object of the same shape.
+56;RememberShapeAndColor3x2-Long-VLA-v0;600;Object;Medium;MP;Observe the object's shape and color, wait, then touch the object of the same shape and color.
+57;RememberShapeAndColor3x3-Long-VLA-v0;600;Object;Medium;MP;Observe the object's shape and color, wait, then touch the object of the same shape and color.
+58;RememberShapeAndColor5x3-Long-VLA-v0;600;Object;Medium;MP;Observe the object's shape and color, wait, then touch the object of the same shape and color.
+59;BunchOfColors3-Long-VLA-v0;700;Capacity;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+60;BunchOfColors5-Long-VLA-v0;700;Capacity;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+61;BunchOfColors7-Long-VLA-v0;700;Capacity;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+62;SeqOfColors3-Long-VLA-v0;800;Capacity;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+63;SeqOfColors5-Long-VLA-v0;1000;Capacity;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+64;SeqOfColors7-Long-VLA-v0;1200;Capacity;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in any order and press the center button.
+65;ChainOfColors3-Long-VLA-v0;800;Sequential;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in the same order as the cubes were shown and press the center button.
+66;ChainOfColors5-Long-VLA-v0;1000;Sequential;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in the same order as the cubes were shown and press the center button.
+67;ChainOfColors7-Long-VLA-v0;1200;Sequential;Long;MP;Observe which colored cubes appear during the cue, wait, then touch all of them in the same order as the cubes were shown and press the center button.
+68;ShellGameShuffleTouch-Long-VLA-v0;600;Tracking;Medium;MP;Observe which cup hides the ball, track the cups as they shuffle, then touch the correct cup.
+69;ShellGameShuffleColorLampTouch-Long-VLA-v0;600;Tracking;Medium;MP;Observe which color is under each cup, track the cups as they shuffle, then touch the cup matching the lamp color.
+70;BlinkCountButtonPressEasy-Long-VLA-v0;1200;Temporal;Long;MP;Count how many times the blue lamp blinks, press the red button exactly that many times when the red lamp turns green, then press the black button to submit your answer.
+71;BlinkCountButtonPressMedium-Long-VLA-v0;1200;Temporal;Long;MP;Count how many times the blue lamp blinks, press the red button exactly that many times when the red lamp turns green, then press the black button to submit your answer.
+72;BlinkCountButtonPressHard-Long-VLA-v0;1200;Temporal;Long;MP;Count how many times the blue lamp blinks, press the red button exactly that many times when the red lamp turns green, then press the black button to submit your answer.
+73;TraceShapeEasy-VLA-v0;250;Procedural;Medium;MP;Watch the red cube trace a shape on the table. When the lamp turns green, pick up the green cube and trace exactly the same shape.
+74;TraceShapeMedium-VLA-v0;300;Procedural;Medium;MP;Watch the red cube trace a shape on the table. When the lamp turns green, pick up the green cube and trace exactly the same shape.
+75;TraceShapeHard-VLA-v0;350;Procedural;Medium;MP;Watch the red cube trace a shape on the table. When the lamp turns green, pick up the green cube and trace exactly the same shape.
+76;TraceShapeSeqEasy-VLA-v0;1500;Procedural;Long;MP;Watch the red cube trace a sequence of shapes. When the lamp turns green, pick up the green cube and trace the same sequence in order. After finishing all shapes, press the button to submit your answer.
+77;TraceShapeSeqMedium-VLA-v0;1500;Procedural;Long;MP;Watch the red cube trace a sequence of shapes. When the lamp turns green, pick up the green cube and trace the same sequence in order. After finishing all shapes, press the button to submit your answer.
+78;TraceShapeSeqHard-VLA-v0;1500;Procedural;Long;MP;Watch the red cube trace a sequence of shapes. When the lamp turns green, pick up the green cube and trace the same sequence in order. After finishing all shapes, press the button to submit your answer.
+79;TimedTransferEasy-VLA-v0;200;Temporal;Short;MP;When the white lamp turns green, start counting steps from that exact moment. Move the blue cube from the green disc to the red disc exactly on step 100 of that count.
+80;TimedTransferMedium-VLA-v0;250;Temporal;Medium;MP;When the white lamp turns green, start counting steps from that exact moment. Move the blue cube from the green disc to the red disc exactly on step 150 of that count.
+81;TimedTransferHard-VLA-v0;300;Temporal;Medium;MP;When the white lamp turns green, start counting steps from that exact moment. Move the blue cube from the green disc to the red disc exactly on step 200 of that count.
+82;TimedTransferEasy-Long-VLA-v0;600;Temporal;Medium;MP;When the white lamp turns green, start counting steps from that exact moment. Move the blue cube from the green disc to the red disc exactly on step 300 of that count.
+83;TimedTransferMedium-Long-VLA-v0;900;Temporal;Long;MP;When the white lamp turns green, start counting steps from that exact moment. Move the blue cube from the green disc to the red disc exactly on step 500 of that count.
+84;TimedTransferHard-Long-VLA-v0;1200;Temporal;Long;MP;When the white lamp turns green, start counting steps from that exact moment. Move the blue cube from the green disc to the red disc exactly on step 1000 of that count.
+85;GatherAndRecall1-VLA-v0;200;Prospective;Short;MP;Move all cubes onto the disc. A lamp will briefly flash while you work. After all cubes are placed, press the button matching the flash color.
+86;GatherAndRecall3-VLA-v0;400;Prospective;Medium;MP;Move all cubes onto the disc. A lamp will briefly flash while you work. After all cubes are placed, press the button matching the flash color.
+87;GatherAndRecall5-VLA-v0;600;Prospective;Medium;MP;Move all cubes onto the disc. A lamp will briefly flash while you work. After all cubes are placed, press the button matching the flash color.
+88;GatherAndRecall7-VLA-v0;800;Prospective;Long;MP;Move all cubes onto the disc. A lamp will briefly flash while you work. After all cubes are placed, press the button matching the flash color.
+89;GatherAndRecall9-VLA-v0;1000;Prospective;Long;MP;Move all cubes onto the disc. A lamp will briefly flash while you work. After all cubes are placed, press the button matching the flash color.

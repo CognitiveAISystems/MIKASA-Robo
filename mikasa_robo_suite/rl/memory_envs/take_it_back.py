@@ -118,7 +118,7 @@ class TakeItBackEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             initial_positions = torch.from_numpy(self._batched_episode_rng.choice([-1, 0, 1])).to(self.device)
@@ -218,7 +218,7 @@ class TakeItBackEnv(BaseEnv):
 
         return {
             "success": is_cube_returned & self.goal_reached_status,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "oracle_info": self.oracle_info,
             "goal_achieved": self.goal_achieved,
             "goal_reached_status": self.goal_reached_status,

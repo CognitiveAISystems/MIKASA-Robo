@@ -222,7 +222,7 @@ class FindImposterShapeAndColorVLABaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
             if hasattr(self, "_prev_action") and self._prev_action is not None:
                 if torch.is_tensor(self._prev_action) and self._prev_action.shape[0] >= int(env_idx.max().item()) + 1:
@@ -370,7 +370,7 @@ class FindImposterShapeAndColorVLABaseEnv(BaseEnv):
             "is_obj_placed": is_obj_placed,
             "is_robot_static": is_robot_static,
             "success": is_obj_placed & is_robot_static & manip_mask,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

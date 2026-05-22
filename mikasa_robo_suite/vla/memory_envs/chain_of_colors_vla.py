@@ -311,7 +311,7 @@ class ChainOfColorsVLABaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             self.touched_cubes = torch.zeros(
@@ -699,7 +699,7 @@ class ChainOfColorsVLABaseEnv(BaseEnv):
             "obj_to_goal_pos": self.obj_to_goal_pos,
             "is_robot_static": is_robot_static,
             "success": success,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "strong_cube_displacement": self.strong_cube_displacement,

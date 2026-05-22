@@ -53,50 +53,8 @@ WAYPOINT_STRIDE = 2
 VALID_ENV_PREFIXES = ("BlinkCountButtonPress",)
 
 
-class CurriculumPhaseNoopActionWrapperPdJointPos(CurriculumPhaseNoopActionWrapper):
-    GRIPPER_LOW = -0.01
-    GRIPPER_HIGH = 0.04
-
-    def _build_hold_action(self, action_template):
-        base_env = self.env.unwrapped
-        robot = base_env.agent.robot
-
-        qpos = robot.get_qpos()  # (n, 9) panda: 7 arm + 2 finger joints (mimic)
-        qpos_arm = qpos[..., :-2].detach().cpu().numpy()  # (n, 7)
-        qpos_gripper = qpos[..., -2].detach().cpu().numpy()  # (n,)
-
-        mid = 0.5 * (self.GRIPPER_HIGH + self.GRIPPER_LOW)
-        half = 0.5 * (self.GRIPPER_HIGH - self.GRIPPER_LOW)
-        grip_norm = (qpos_gripper - mid) / half
-        grip_norm = np.clip(grip_norm, -1.0, 1.0)
-
-        hold = np.concatenate([qpos_arm, grip_norm[..., None]], axis=1).astype(np.float32)
-
-        if np.asarray(action_template).ndim == 1:
-            return hold[0]
-        return hold
-
-    def action(self, action):
-        noop_mask = self._get_noop_mask()
-        if noop_mask is None or not noop_mask.any().item():
-            return action
-
-        if isinstance(action, np.ndarray):
-            modified = action.copy()
-            hold = self._build_hold_action(modified)
-            if modified.ndim == 1:
-                return hold
-            mask_np = noop_mask.detach().cpu().numpy()
-            modified[mask_np] = hold[mask_np]
-            return modified
-
-        modified = action.clone()
-        hold_np = self._build_hold_action(modified.detach().cpu().numpy())
-        hold_t = torch.as_tensor(hold_np, dtype=modified.dtype, device=modified.device)
-        if modified.ndim == 1:
-            return hold_t[0]
-        modified[noop_mask] = hold_t[noop_mask]
-        return modified
+# CurriculumPhaseNoopActionWrapperPdJointPos is imported via
+# `from mikasa_robo_suite.vla.utils.wrappers import *` above.
 
 
 def _to_bool_scalar(x):
@@ -120,7 +78,7 @@ def _elapsed_from_info(info):
 def _validate_flatten_obs(obs):
     if not isinstance(obs, dict):
         raise RuntimeError(f"Expected dict observation from FlattenRGBDObservationWrapper, got {type(obs).__name__}.")
-    if "rgb" not in obs or "joints" not in obs:
+    if "rgb" not in obs or "proprio" not in obs:
         raise RuntimeError(
             "Missing required keys in observation. "
             "Use StateOnlyTensorToDictWrapper + "

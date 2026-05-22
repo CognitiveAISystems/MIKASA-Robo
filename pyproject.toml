@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mikasa-robo-suite"
-version = "0.0.5"
+version = "1.0.0"
 description = "Gym-like memory-intensive environments for robotic tabletop manipulation"
 readme = "README.md"
 requires-python = ">=3.9,<3.12"
@@ -38,6 +38,7 @@ dependencies = [
   "ipykernel>=7.0.0a2",
   "seaborn>=0.13.2",
   "ruff>=0.15.8",
+  "rich>=13.0",
 ]
 
 [project.urls]

@@ -56,7 +56,7 @@ class TaskSpec:
     env_id: str
     source_hint: Optional[str]
     configured: bool
-    prompt: str
+    language_instruction: str
 
 
 @dataclass
@@ -328,22 +328,29 @@ def load_tasks_from_csv(tasks_csv: Path, include_unconfigured: bool) -> List[Tas
 
     tasks: List[TaskSpec] = []
     with open(tasks_csv, "r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
+        sample = f.read(4096)
+        f.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+        except csv.Error:
+            dialect = csv.excel
+
+        reader = csv.DictReader(f, dialect=dialect)
         for row in reader:
-            env_id = (row.get("name") or row.get("env_id") or "").strip()
+            env_id = (row.get("name") or row.get("Name") or row.get("env_id") or "").strip()
             if not env_id:
                 continue
             configured = parse_bool(row.get("Configured", True))
             if not configured and not include_unconfigured:
                 continue
             source_hint = (row.get("Data Source") or row.get("source") or "").strip().upper() or None
-            prompt = (row.get("prompt") or "").strip()
+            language_instruction = (row.get("language_instruction") or "").strip()
             tasks.append(
                 TaskSpec(
                     env_id=env_id,
                     source_hint=source_hint,
                     configured=configured,
-                    prompt=prompt,
+                    language_instruction=language_instruction,
                 )
             )
     return tasks
@@ -388,7 +395,7 @@ def resolve_tasks(args: argparse.Namespace) -> List[TaskSpec]:
                 candidate = sorted(fuzzy_matches, key=lambda t: len(normalize_env_token(t.env_id)))[0]
 
         if candidate is None:
-            candidate = TaskSpec(env_id=token, source_hint=None, configured=True, prompt="")
+            candidate = TaskSpec(env_id=token, source_hint=None, configured=True, language_instruction="")
 
         if is_skipped(candidate.env_id):
             continue

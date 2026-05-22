@@ -1,0 +1,233 @@
+/* MIKASA-Robo-VLA documentation polish for PyData Sphinx Theme. */
+
+.bd-page-width {
+  max-width: 1480px;
+}
+
+.bd-main .bd-content .bd-article-container {
+  max-width: 1160px;
+}
+
+.bd-main .bd-content .bd-article-container h1 {
+  margin-bottom: 1rem;
+}
+
+.visual-abstract {
+  --gif-gap: 10px;
+  --gif-tile-width: clamp(190px, calc((100% - (3 * var(--gif-gap))) / 4), 290px);
+  overflow: hidden;
+  position: relative;
+  margin: 0.75rem 0 1.5rem;
+  padding: 2px 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+.visual-abstract__track {
+  display: flex;
+  gap: 0;
+  width: max-content;
+  animation: visual-abstract-scroll 120s linear infinite;
+}
+
+.visual-abstract:hover .visual-abstract__track {
+  animation-play-state: paused;
+}
+
+.visual-abstract__group {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-columns: var(--gif-tile-width);
+  gap: var(--gif-gap);
+  padding-right: var(--gif-gap);
+  flex: 0 0 auto;
+}
+
+.visual-abstract img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: center center;
+  border-radius: 6px;
+  border: 1px solid var(--pst-color-border);
+  background: #111827;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+}
+
+@keyframes visual-abstract-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visual-abstract__track {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .visual-abstract {
+    --gif-tile-width: clamp(160px, calc((100% - var(--gif-gap)) / 2), 260px);
+  }
+}
+
+@media (max-width: 520px) {
+  .visual-abstract {
+    --gif-tile-width: min(82vw, 280px);
+  }
+}
+
+.bd-content table {
+  font-size: 0.92rem;
+}
+
+.bd-content table td,
+.bd-content table th {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.bd-content .pst-scrollable-table-container {
+  overflow-x: auto;
+}
+
+table.wide-table {
+  width: 100%;
+  min-width: 1840px;
+  table-layout: fixed;
+}
+
+.bd-content table.wide-table td:nth-child(2),
+.bd-content table.wide-table th:nth-child(2),
+.bd-content table.wide-table td:nth-child(2) a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+
+
+.mikasa-copy-container {
+  position: relative;
+}
+
+.mikasa-copy-button {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 3;
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.35rem;
+  padding: 0.18rem 0.5rem;
+  color: var(--pst-color-text-muted);
+  background: var(--pst-color-surface);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.mikasa-copy-container:hover .mikasa-copy-button,
+.mikasa-copy-button:focus-visible {
+  opacity: 1;
+}
+
+.mikasa-copy-button:hover {
+  color: var(--pst-color-primary);
+  border-color: var(--pst-color-primary);
+}
+
+
+.task-overview-preview {
+  width: 180px;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: center center;
+  border-radius: 6px;
+  border: 1px solid var(--pst-color-border);
+  background: #111827;
+  display: block;
+}
+
+.bd-content table.wide-table td:first-child,
+.bd-content table.wide-table th:first-child {
+  min-width: 180px;
+}
+
+.hf-inline-icon {
+  height: 1.1em;
+  width: 1.1em;
+  margin-right: 0.25rem;
+  vertical-align: -0.18em;
+}
+
+/* Keep autodoc API pages readable with long Python signatures. */
+.bd-article dt.sig,
+.bd-article dl.py dt.sig {
+  overflow-x: auto;
+  white-space: normal;
+  line-height: 1.55;
+  padding-right: 2.25rem;
+}
+
+.bd-article dt.sig .pre,
+.bd-article dl.py dt.sig .pre {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.bd-article dt.sig .sig-prename,
+.bd-article dt.sig .sig-name,
+.bd-article dt.sig .sig-param {
+  overflow-wrap: anywhere;
+}
+
+/* Source-code pages should keep code formatting stable and scroll horizontally. */
+.bd-article div.highlight {
+  overflow-x: auto;
+}
+
+.bd-article div.highlight pre {
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.bd-article .viewcode-block {
+  overflow-x: visible;
+}
+
+.bd-article .viewcode-back {
+  font-family: var(--pst-font-family-monospace);
+  font-size: 0.82em;
+}
+
+/* Prevent wide autodoc and source-code pages from expanding the PyData layout. */
+.bd-main .bd-content,
+.bd-main .bd-content .bd-article-container,
+.bd-article,
+.bd-article section,
+.bd-article dl,
+.bd-article dd {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bd-article dl.py {
+  overflow-wrap: anywhere;
+}
+
+.bd-article dt.sig {
+  display: block;
+  max-width: 100%;
+}
+
+.bd-article dt.sig a.headerlink,
+.bd-article dt.sig a.viewcode-link {
+  white-space: nowrap;
+}

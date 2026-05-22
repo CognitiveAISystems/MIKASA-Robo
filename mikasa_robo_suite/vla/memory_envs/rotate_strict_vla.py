@@ -126,7 +126,7 @@ class RotateStrictVLABaseEnv(BaseEnv):
                 )
             self.target_angle = self.target_angle.to(torch.float16)
 
-            self.prompt = self.target_angle
+            self.task_cue = self.target_angle
             self.reward_dict = None
 
             initial_z_rotation = self._batched_episode_rng.rand() * 2 * np.pi
@@ -196,7 +196,7 @@ class RotateStrictVLABaseEnv(BaseEnv):
 
         return {
             "success": correct_y_angle & correct_x_pos & correct_y_pos & is_stable,
-            "prompt": self.target_angle,
+            "task_cue": self.target_angle,
             "language_instruction": language_instruction,
             "oracle_info": self.oracle_info,
             "relative_angle": relative_angle,

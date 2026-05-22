@@ -86,7 +86,7 @@ class RotateStrictEnv(BaseEnv):
                 self.target_angle = torch.where(is_positive, angle_magnitude, -angle_magnitude)
             self.target_angle = self.target_angle.to(torch.float16)
 
-            self.prompt = self.target_angle
+            self.task_cue = self.target_angle
             self.reward_dict = None
 
             # Generate peg random initial rotation around Z axis
@@ -172,7 +172,7 @@ class RotateStrictEnv(BaseEnv):
 
         return {
             "success": correct_y_angle & correct_x_pos & correct_y_pos & is_stable,
-            "prompt": self.target_angle,
+            "task_cue": self.target_angle,
             "oracle_info": self.oracle_info,
             "relative_angle": relative_angle,
             "x_pos_error": x_pos_diff,

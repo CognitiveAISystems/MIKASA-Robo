@@ -221,7 +221,7 @@ class TimedTransferVLABaseEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
             env_idx = env_idx.to(self.device)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             # Random center for the disc pair
@@ -368,7 +368,7 @@ class TimedTransferVLABaseEnv(BaseEnv):
             "cube_to_red_dist": cube_to_red_dist,
             "is_grasped": is_grasped,
             "obj_to_goal_pos": self.obj_to_goal_pos,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self._lang_instruction,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

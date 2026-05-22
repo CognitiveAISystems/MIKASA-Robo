@@ -207,7 +207,7 @@ class ShellGamePushVLABaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             self.cup_with_ball_number = self._batched_episode_rng.choice([0, 1, 2])
@@ -344,7 +344,7 @@ class ShellGamePushVLABaseEnv(BaseEnv):
             is_obj_placed=self.is_obj_placed,
             is_robot_static=self.is_robot_static,
             success=self.is_obj_placed & self.is_robot_static,
-            prompt=self.prompt,
+            task_cue=self.task_cue,
             language_instruction=self.LANGUAGE_INSTRUCTION,
             oracle_info=self.oracle_info,
             reward_dict=self.reward_dict,

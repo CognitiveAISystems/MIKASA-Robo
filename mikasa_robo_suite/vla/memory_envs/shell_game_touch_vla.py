@@ -194,7 +194,7 @@ class ShellGameTouchVLABaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             self.cup_with_ball_number = self._batched_episode_rng.choice([0, 1, 2])
@@ -357,7 +357,7 @@ class ShellGameTouchVLABaseEnv(BaseEnv):
             mug_max_displacement=self.mug_max_displacement,
             is_mug_displacement_ok=self.is_mug_displacement_ok,
             success=self.is_obj_placed & self.is_robot_static & self.is_mug_displacement_ok,
-            prompt=self.prompt,
+            task_cue=self.task_cue,
             language_instruction=self.LANGUAGE_INSTRUCTION,
             oracle_info=self.oracle_info,
             reward_dict=self.reward_dict,

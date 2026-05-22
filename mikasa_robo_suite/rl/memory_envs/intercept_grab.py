@@ -76,7 +76,7 @@ class InterceptGrabBaseEnv(BaseEnv):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             xyz = torch.zeros((b, 3))
@@ -122,7 +122,7 @@ class InterceptGrabBaseEnv(BaseEnv):
 
         return {
             "success": success,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "oracle_info": self.oracle_info,
             "is_ball_grasped": is_ball_grasped,
             "is_robot_static": is_robot_static,

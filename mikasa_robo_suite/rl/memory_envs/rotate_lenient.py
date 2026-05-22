@@ -86,7 +86,7 @@ class RotateLanientEnv(BaseEnv):
                 self.target_angle = torch.where(is_positive, angle_magnitude, -angle_magnitude)
             self.target_angle = self.target_angle.to(torch.float16)
 
-            self.prompt = self.target_angle
+            self.task_cue = self.target_angle
             self.reward_dict = None
 
             # Generate peg random initial rotation around Z axis
@@ -154,7 +154,7 @@ class RotateLanientEnv(BaseEnv):
 
         return {
             "success": self.correct_angle & is_stable,
-            "prompt": self.target_angle,
+            "task_cue": self.target_angle,
             "oracle_info": self.oracle_info,
             "relative_angle": relative_angle,
             "y_angle_error": y_angle_diff,

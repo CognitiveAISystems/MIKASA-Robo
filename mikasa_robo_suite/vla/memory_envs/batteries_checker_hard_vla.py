@@ -369,7 +369,7 @@ class BatteriesCheckerVLABaseEnv(BaseEnv):
             env_idx = env_idx.to(self.device)
             self.table_scene.initialize(env_idx)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             tray_xyz = torch.zeros((b, 3), device=self.device)
@@ -677,7 +677,7 @@ class BatteriesCheckerVLABaseEnv(BaseEnv):
             "new_button_press_event": self.new_button_press_event,
             "button_press_depth": self.button_press_depth,
             "obj_to_goal_pos": self.obj_to_goal_pos,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,

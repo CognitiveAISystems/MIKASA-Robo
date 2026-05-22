@@ -8,6 +8,40 @@ import torch
 from gymnasium import spaces
 
 
+def _put_text_with_outline(
+    image,
+    text,
+    org,
+    font_face,
+    font_scale,
+    color,
+    thickness,
+    line_type=cv2.LINE_AA,
+):
+    """Draw readable overlay text over light and dark render backgrounds."""
+    outline_thickness = max(2, int(thickness) + 2)
+    cv2.putText(
+        image,
+        text,
+        org,
+        font_face,
+        font_scale,
+        (20, 20, 20),
+        outline_thickness,
+        line_type,
+    )
+    cv2.putText(
+        image,
+        text,
+        org,
+        font_face,
+        font_scale,
+        color,
+        thickness,
+        line_type,
+    )
+
+
 class StateOnlyTensorToDictWrapper(gym.ObservationWrapper):
     """Wrapper that converts tensor observation to a dictionary with 'state' key."""
 
@@ -27,14 +61,14 @@ class StateOnlyTensorToDictWrapper(gym.ObservationWrapper):
             b_ = obs["agent"]["qpos"].shape[0]
             # obs.update({'rgb': self.unwrapped.rgb.unsqueeze(-1)})
 
-        prompt_ = self.unwrapped.prompt
+        task_cue_ = self.unwrapped.task_cue
         oracle_info_ = self.unwrapped.oracle_info
 
-        if prompt_ is not None:
-            if len(prompt_.shape) == 1:
-                prompt_ = prompt_.unsqueeze(-1)
+        if task_cue_ is not None:
+            if len(task_cue_.shape) == 1:
+                task_cue_ = task_cue_.unsqueeze(-1)
         else:
-            prompt_ = torch.ones(b_, 1) * 4242424242
+            task_cue_ = torch.ones(b_, 1) * 4242424242
 
         if oracle_info_ is not None:
             if len(oracle_info_.shape) == 1:
@@ -42,12 +76,14 @@ class StateOnlyTensorToDictWrapper(gym.ObservationWrapper):
         else:
             oracle_info_ = torch.ones(b_, 1) * 4242424242
 
-        obs.update({"prompt": prompt_, "oracle_info": oracle_info_})
+        obs.update({"task_cue": task_cue_, "oracle_info": oracle_info_})
         return obs
 
 
 class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
-    """Converts observation['joints'] to 7D proprio: xyz(3) + rpy(3) + gripper(1).
+    """Convert flattened joint-state input into observation['proprio'].
+
+    The VLA-facing proprio vector is xyz(3) + rpy(3) + gripper(1).
 
     Expected source layout for flattened joints is:
     [tcp_pose(7), qpos(n), qvel(n), ...], where tcp_pose is [x, y, z, qw, qx, qy, qz].
@@ -77,7 +113,8 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
                 new_shape = (7,) if len(shape) == 0 else (*shape[:-1], 7)
                 low = np.full(new_shape, -np.inf, dtype=np.float32)
                 high = np.full(new_shape, np.inf, dtype=np.float32)
-                new_spaces["joints"] = spaces.Box(low=low, high=high, dtype=np.float32)
+                new_spaces.pop("joints")
+                new_spaces["proprio"] = spaces.Box(low=low, high=high, dtype=np.float32)
                 self.observation_space = spaces.Dict(new_spaces)
 
     def _infer_qpos_dim_from_env(self) -> Optional[int]:
@@ -168,7 +205,8 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
             arr = np.asarray(joints, dtype=np.float32)
 
         if arr.shape[-1] == 7:
-            out["joints"] = arr
+            out["proprio"] = arr
+            out.pop("joints", None)
             return out
 
         original_shape = tuple(arr.shape)
@@ -210,9 +248,10 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
             )
 
         if original_ndim == 1:
-            out["joints"] = proprio[0]
+            out["proprio"] = proprio[0]
         else:
-            out["joints"] = proprio.reshape(*original_shape[:-1], 7)
+            out["proprio"] = proprio.reshape(*original_shape[:-1], 7)
+        out.pop("joints", None)
         return out
 
 
@@ -229,7 +268,7 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
 #         })
 
 #     def observation(self, obs):
-#         return {'state': obs, 'prompt': self.unwrapped.prompt.unsqueeze(-1)}
+#         return {'state': obs, 'task_cue': self.unwrapped.task_cue.unsqueeze(-1)}
 
 # class RotateAddAngleObservationWrapper(gym.ObservationWrapper):
 #     def __init__(self, env):
@@ -299,9 +338,9 @@ class RotateRenderAngleInfoWrapper(gym.Wrapper):
         # Add text
         for i in range(len(frame)):
             # if isinstance(self.current_obs, dict):
-            target_angle = str(np.round(self.info["prompt"][i].item() * 180 / np.pi, 2))
+            target_angle = str(np.round(self.info["task_cue"][i].item() * 180 / np.pi, 2))
             current_angle = str(np.round(self.info["relative_angle"][i].item() * 180 / np.pi, 2))
-            cv2.putText(
+            _put_text_with_outline(
                 frame[i],
                 "Target : " + target_angle + " deg",
                 (10, 60),  # position
@@ -312,10 +351,10 @@ class RotateRenderAngleInfoWrapper(gym.Wrapper):
                 cv2.LINE_AA,
             )
 
-            cv2.putText(
+            _put_text_with_outline(
                 frame[i],
                 "Current: " + current_angle + " deg",
-                (10, 90),  # position
+                (10, 120),  # position
                 cv2.FONT_HERSHEY_SIMPLEX,  # font
                 1.0,  # font scale
                 (255, 255, 255),  # color (white)
@@ -323,7 +362,7 @@ class RotateRenderAngleInfoWrapper(gym.Wrapper):
                 cv2.LINE_AA,
             )
 
-            # cv2.putText(
+            # _put_text_with_outline(
             #     frame[i],
             #     'Error: ' + error_angle + ' deg',
             #     (10, 120),  # position
@@ -372,7 +411,7 @@ class RenderStepInfoWrapper(gym.Wrapper):
         for i in range(len(frame)):
             img = np.ascontiguousarray(frame[i])
             # Env. step
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"Step: {self.step_count[i]}",
                 (10, 30),  # position
@@ -432,10 +471,10 @@ class RenderRewardInfoWrapper(gym.Wrapper):
             else:
                 render_reward = 0.0
             img = np.ascontiguousarray(frame[i])
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"Reward: {render_reward:.3f}",
-                (10, 120),  # position
+                (10, 90),  # position
                 cv2.FONT_HERSHEY_SIMPLEX,  # font
                 1.0,  # font scale
                 (255, 255, 255),  # color (white)
@@ -521,10 +560,10 @@ class RenderPressProgressInfoWrapper(gym.Wrapper):
             conf_done = self._to_scalar(confirmed_press_count, i) if confirmed_press_count is not None else -1
             total = self._to_scalar(target_blinks, i)
             img = np.ascontiguousarray(frame[i])
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"Press raw/conf: {raw_done}/{conf_done}/{total}",
-                (10, 90),
+                (10, 120),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
                 (255, 255, 255),
@@ -594,7 +633,7 @@ class RenderWorkingBatteriesInfoWrapper(gym.Wrapper):
             done = self._to_scalar(found, i)
             total = self._to_scalar(target, i)
             img = np.ascontiguousarray(frame[i])
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"Working found: {done}/{total}",
                 (10, 150),
@@ -756,6 +795,20 @@ class CurriculumPhaseNoopActionWrapper(gym.ActionWrapper):
             freeze_until = freeze_until + self._to_torch(base_env.empty_steps_per_env).to(torch.int64)
         return current_steps < freeze_until
 
+    @staticmethod
+    def _batch_action_for_mask(action, noop_mask):
+        """Expand a broadcastable flat action before applying a per-env mask."""
+        batch_size = int(noop_mask.numel())
+        if torch.is_tensor(action):
+            if action.ndim == 1:
+                return action.unsqueeze(0).expand(batch_size, -1).clone()
+            return action.clone()
+
+        modified = np.array(action, copy=True)
+        if modified.ndim == 1:
+            return np.broadcast_to(modified, (batch_size, *modified.shape)).copy()
+        return modified
+
     def action(self, action):
         noop_mask = self._get_noop_mask()
         if noop_mask is None:
@@ -763,8 +816,11 @@ class CurriculumPhaseNoopActionWrapper(gym.ActionWrapper):
         if not noop_mask.any().item():
             return action
 
-        modified_action = action.clone() if torch.is_tensor(action) else np.array(action, copy=True)
-        modified_action[noop_mask] = 0
+        modified_action = self._batch_action_for_mask(action, noop_mask)
+        if torch.is_tensor(modified_action):
+            modified_action[noop_mask.to(device=modified_action.device)] = 0
+        else:
+            modified_action[noop_mask.detach().cpu().numpy()] = 0
         return modified_action
 
     def step(self, action):
@@ -776,6 +832,57 @@ class CurriculumPhaseNoopActionWrapper(gym.ActionWrapper):
         obs, info = super().reset(**kwargs)
         self.current_steps = info["elapsed_steps"]
         return obs, info
+
+
+class CurriculumPhaseNoopActionWrapperPdJointPos(CurriculumPhaseNoopActionWrapper):
+    """Curriculum-phase noop wrapper for envs running in `pd_joint_pos` control mode.
+
+    Plain `CurriculumPhaseNoopActionWrapper` sends action = 0, which in
+    `pd_joint_pos` would command the robot to move toward qpos = [0, ..., 0]
+    instead of holding the current pose. This subclass overrides the noop
+    action to be the robot's current arm qpos plus a normalized gripper
+    command — i.e., "stay where you are".
+    """
+
+    GRIPPER_LOW = -0.01
+    GRIPPER_HIGH = 0.04
+
+    def _build_hold_action(self, action_template):
+        base_env = self.env.unwrapped
+        robot = base_env.agent.robot
+
+        qpos = robot.get_qpos()  # (n, 9) panda: 7 arm + 2 finger joints (mimic)
+        qpos_arm = qpos[..., :-2].detach().cpu().numpy()  # (n, 7)
+        qpos_gripper = qpos[..., -2].detach().cpu().numpy()  # (n,)
+
+        mid = 0.5 * (self.GRIPPER_HIGH + self.GRIPPER_LOW)
+        half = 0.5 * (self.GRIPPER_HIGH - self.GRIPPER_LOW)
+        grip_norm = (qpos_gripper - mid) / half
+        grip_norm = np.clip(grip_norm, -1.0, 1.0)
+
+        hold = np.concatenate([qpos_arm, grip_norm[..., None]], axis=1).astype(np.float32)
+
+        if np.asarray(action_template).ndim == 1:
+            return hold[0]
+        return hold
+
+    def action(self, action):
+        noop_mask = self._get_noop_mask()
+        if noop_mask is None or not noop_mask.any().item():
+            return action
+
+        modified = self._batch_action_for_mask(action, noop_mask)
+        if isinstance(modified, np.ndarray):
+            hold = self._build_hold_action(modified)
+            mask_np = noop_mask.detach().cpu().numpy()
+            modified[mask_np] = hold[mask_np]
+            return modified
+
+        hold_np = self._build_hold_action(modified.detach().cpu().numpy())
+        hold_t = torch.as_tensor(hold_np, dtype=modified.dtype, device=modified.device)
+        mask_t = noop_mask.to(device=modified.device)
+        modified[mask_t] = hold_t[mask_t]
+        return modified
 
 
 class ShellGameRenderCupInfoWrapper(gym.Wrapper):
@@ -841,7 +948,7 @@ class ShellGameRenderCupInfoWrapper(gym.Wrapper):
             cup = self._oracle_text(i)
             img = np.ascontiguousarray(frame[i])
             # Target cup
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 cup,
                 (10, 60),  # position
@@ -888,7 +995,7 @@ class DebugRewardWrapper(gym.Wrapper):
             if "reward_dict" in self.info and self.info["reward_dict"] is not None:
                 for reward_num, (reward_key, reward_value) in enumerate(self.info["reward_dict"].items()):
                     img = np.ascontiguousarray(frame[i])
-                    cv2.putText(
+                    _put_text_with_outline(
                         img,
                         f"{reward_key}: {reward_value[i].detach().cpu().numpy():.3f}",
                         (10, 150 + (reward_num + 1) * 20),  # position
@@ -904,24 +1011,21 @@ class DebugRewardWrapper(gym.Wrapper):
 
 
 class RememberColorInfoWrapper(gym.Wrapper):
-    """Render target color for remember-color tasks."""
+    """Render the target color as a color swatch for color-memory tasks."""
 
     def __init__(self, env):
         super().__init__(env)
         self.step_count = 0
         self.current_obs = None
         self.info = None
-        self.colors_names = {
-            0: "Red",
-            1: "Lime",
-            2: "Blue",
-            3: "Yellow",
-            4: "Magenta",
-            5: "Cyan",
-            6: "Maroon",
-            7: "Olive",
-            8: "Teal",
-        }
+
+    def _decode_color_rgb(self, color_id: int):
+        color_dict = getattr(self.env.unwrapped, "color_dict", {})
+        if color_id in color_dict:
+            rgb = np.asarray(color_dict[color_id][:3], dtype=np.float32)
+            rgb = np.clip(rgb * 255.0, 0.0, 255.0).astype(np.uint8)
+            return int(rgb[0]), int(rgb[1]), int(rgb[2])
+        return 255, 255, 255
 
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
@@ -946,21 +1050,44 @@ class RememberColorInfoWrapper(gym.Wrapper):
         if self.info is None or "oracle_info" not in self.info:
             return frame
 
+        target_text = "Target:"
+        (text_width, _), _ = cv2.getTextSize(
+            target_text,
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0,
+            2,
+        )
+        square_size = 22
+        square_x = 10 + text_width + 10
+        square_y = 38
+
         for i in range(len(frame)):
             color_idx = int(self.info["oracle_info"][i].item())
-            color_name = self.colors_names.get(color_idx, str(color_idx))
-            text = f"Target: {color_name}"
-
             img = np.ascontiguousarray(frame[i])
-            cv2.putText(
+
+            _put_text_with_outline(
                 img,
-                text,
+                target_text,
                 (10, 60),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1.0,
                 (255, 255, 255),
                 2,
                 cv2.LINE_AA,
+            )
+            cv2.rectangle(
+                img,
+                (square_x, square_y),
+                (square_x + square_size, square_y + square_size),
+                self._decode_color_rgb(color_idx),
+                -1,
+            )
+            cv2.rectangle(
+                img,
+                (square_x, square_y),
+                (square_x + square_size, square_y + square_size),
+                (255, 255, 255),
+                2,
             )
             frame[i] = img
 
@@ -1016,7 +1143,7 @@ class RememberShapeInfoWrapper(gym.Wrapper):
             text = f"Target: {shape_name}"
 
             img = np.ascontiguousarray(frame[i])
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 text,
                 (10, 60),
@@ -1055,15 +1182,6 @@ class RememberShapeAndColorInfoWrapper(gym.Wrapper):
         self.step_count = info["elapsed_steps"].detach().cpu().numpy()
         return obs, reward, terminated, truncated, info
 
-    def decode_color(self, color_id: int) -> str:
-        if color_id == 0:
-            return "Red"
-        if color_id == 1:
-            return "Green"
-        if color_id == 2:
-            return "Blue"
-        return "Unknown"
-
     def decode_shape(self, shape_id: int) -> str:
         return self.shape_dict.get(shape_id, "Unknown")
 
@@ -1096,15 +1214,14 @@ class RememberShapeAndColorInfoWrapper(gym.Wrapper):
             shape_id = int(self.info["oracle_info"][i][0].item())
             color_id = int(self.info["oracle_info"][i][1].item())
 
-            color_name = self.decode_color(color_id)
             shape_name = self.decode_shape(shape_id)
             color_rgb = self._decode_color_rgb(color_id)
 
             img = np.ascontiguousarray(frame[i])
-
-            cv2.putText(
+            target_text = "Target:"
+            _put_text_with_outline(
                 img,
-                "Target: ",
+                target_text,
                 (10, 60),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1.0,
@@ -1114,34 +1231,33 @@ class RememberShapeAndColorInfoWrapper(gym.Wrapper):
             )
 
             (text_width, _), _ = cv2.getTextSize(
-                "Target: ",
+                target_text,
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1.0,
                 2,
             )
-
-            cv2.putText(
+            square_size = 22
+            square_x = 10 + text_width + 10
+            square_y = 38
+            cv2.rectangle(
                 img,
-                f"{color_name} ",
-                (10 + text_width, 60),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1.0,
+                (square_x, square_y),
+                (square_x + square_size, square_y + square_size),
                 color_rgb,
+                -1,
+            )
+            cv2.rectangle(
+                img,
+                (square_x, square_y),
+                (square_x + square_size, square_y + square_size),
+                (255, 255, 255),
                 2,
-                cv2.LINE_AA,
             )
 
-            (color_width, _), _ = cv2.getTextSize(
-                f"{color_name} ",
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1.0,
-                2,
-            )
-
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 shape_name,
-                (10 + text_width + color_width, 60),
+                (square_x + square_size + 12, 60),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1.0,
                 (255, 255, 255),
@@ -1159,10 +1275,11 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
 
     SHAPE_NAMES = {0: "Circle", 1: "Square", 2: "Triangle"}
 
-    def __init__(self, env, minimap_size=160):
+    def __init__(self, env, minimap_size=160, minimap_top=130):
         super().__init__(env)
         self.minimap_size = minimap_size
         self.minimap_margin = 10
+        self.minimap_top = minimap_top
         self.info = None
         self._trails = {}
 
@@ -1270,7 +1387,7 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
 
         for i in range(len(frame)):
             img = np.ascontiguousarray(frame[i])
-            _, w = img.shape[:2]
+            h, w = img.shape[:2]
 
             waypoints, checkpoints, visited, shape_id, seq_text = self._extract_trace_view(base_env, i)
             if waypoints.shape[0] == 0 or checkpoints.shape[0] == 0:
@@ -1280,8 +1397,11 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
             center = waypoints.mean(axis=0)
             extent = max(np.max(np.abs(waypoints - center)), 0.01)
 
-            x0 = w - size - margin
-            y0 = margin
+            # Keep the minimap on the main view instead of the right camera strip.
+            x0 = margin
+            text_height = 72 if seq_text is not None else 54
+            max_top = max(margin, h - size - text_height - margin)
+            y0 = min(max(margin, self.minimap_top), max_top)
 
             overlay = img.copy()
             cv2.rectangle(overlay, (x0, y0), (x0 + size, y0 + size), (30, 30, 30), -1)
@@ -1289,6 +1409,7 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
             cv2.rectangle(img, (x0, y0), (x0 + size, y0 + size), (80, 80, 80), 1)
 
             scale = (size - 20) / (2 * extent * 1.3)
+
             def to_px(xy):
                 return self._to_px(xy, center, scale, x0, y0, size)
 
@@ -1317,7 +1438,7 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
             shape_name = self.SHAPE_NAMES.get(shape_id, f"Shape {shape_id}")
             n_visited = int(visited.sum())
             n_total = len(visited)
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"{shape_name} [{n_visited}/{n_total}]",
                 (x0, y0 + size + 18),
@@ -1336,7 +1457,7 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
                 start_dist = float(np.linalg.norm(green_xy - start_cp))
                 cp_thresh = float(getattr(base_env, "CHECKPOINT_THRESH", 0.035))
                 closed = bool(n_visited == n_total and start_dist < cp_thresh)
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"Closed: {'YES' if closed else 'NO'}",
                 (x0, y0 + size + 54),
@@ -1367,7 +1488,7 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
                 "DEMO": (0, 0, 255),
                 "ACTION": (0, 200, 0),
             }
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 phase,
                 (x0, y0 + size + 36),
@@ -1378,7 +1499,7 @@ class RenderTraceShapeDebugWrapper(gym.Wrapper):
                 cv2.LINE_AA,
             )
             if seq_text is not None:
-                cv2.putText(
+                _put_text_with_outline(
                     img,
                     seq_text,
                     (x0, y0 + size + 72),
@@ -1462,7 +1583,7 @@ class MemoryCapacityInfoWrapper(gym.Wrapper):
 
             img = np.ascontiguousarray(frame[i])
 
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 "Target: ",
                 (10, 60),
@@ -1601,7 +1722,7 @@ class RenderTimedTransferInfoWrapper(gym.Wrapper):
             rx = w - 260
 
             # Draw countdown (large)
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"T-{remaining}",
                 (rx, 30),
@@ -1613,7 +1734,7 @@ class RenderTimedTransferInfoWrapper(gym.Wrapper):
             )
 
             # Draw phase
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 phase,
                 (rx, 55),
@@ -1625,7 +1746,7 @@ class RenderTimedTransferInfoWrapper(gym.Wrapper):
             )
 
             # Draw window info
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 f"[{w_start},{w_end}] d={delay}",
                 (rx, 75),
@@ -1639,7 +1760,7 @@ class RenderTimedTransferInfoWrapper(gym.Wrapper):
             # Draw cube status
             cube_text = "ON RED" if cube_on_red else "not on red"
             cube_color = (0, 255, 0) if cube_on_red else (150, 150, 150)
-            cv2.putText(
+            _put_text_with_outline(
                 img,
                 cube_text,
                 (rx, 95),

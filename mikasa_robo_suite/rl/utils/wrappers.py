@@ -24,14 +24,14 @@ class StateOnlyTensorToDictWrapper(gym.ObservationWrapper):
             b_ = obs["agent"]["qpos"].shape[0]
             # obs.update({'rgb': self.unwrapped.rgb.unsqueeze(-1)})
 
-        prompt_ = self.unwrapped.prompt
+        task_cue_ = self.unwrapped.task_cue
         oracle_info_ = self.unwrapped.oracle_info
 
-        if prompt_ is not None:
-            if len(prompt_.shape) == 1:
-                prompt_ = prompt_.unsqueeze(-1)
+        if task_cue_ is not None:
+            if len(task_cue_.shape) == 1:
+                task_cue_ = task_cue_.unsqueeze(-1)
         else:
-            prompt_ = torch.ones(b_, 1) * 4242424242
+            task_cue_ = torch.ones(b_, 1) * 4242424242
 
         if oracle_info_ is not None:
             if len(oracle_info_.shape) == 1:
@@ -39,7 +39,7 @@ class StateOnlyTensorToDictWrapper(gym.ObservationWrapper):
         else:
             oracle_info_ = torch.ones(b_, 1) * 4242424242
 
-        obs.update({"prompt": prompt_, "oracle_info": oracle_info_})
+        obs.update({"task_cue": task_cue_, "oracle_info": oracle_info_})
         return obs
 
 
@@ -56,7 +56,7 @@ class StateOnlyTensorToDictWrapper(gym.ObservationWrapper):
 #         })
 
 #     def observation(self, obs):
-#         return {'state': obs, 'prompt': self.unwrapped.prompt.unsqueeze(-1)}
+#         return {'state': obs, 'task_cue': self.unwrapped.task_cue.unsqueeze(-1)}
 
 # class RotateAddAngleObservationWrapper(gym.ObservationWrapper):
 #     def __init__(self, env):
@@ -126,7 +126,7 @@ class RotateRenderAngleInfoWrapper(gym.Wrapper):
         # Add text
         for i in range(len(frame)):
             # if isinstance(self.current_obs, dict):
-            target_angle = str(np.round(self.info["prompt"][i].item() * 180 / np.pi, 2))
+            target_angle = str(np.round(self.info["task_cue"][i].item() * 180 / np.pi, 2))
             current_angle = str(np.round(self.info["relative_angle"][i].item() * 180 / np.pi, 2))
             cv2.putText(
                 frame[i],

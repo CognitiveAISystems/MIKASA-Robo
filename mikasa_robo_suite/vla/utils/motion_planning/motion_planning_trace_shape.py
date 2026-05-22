@@ -96,7 +96,7 @@ def _elapsed_from_info(info):
 def _validate_flatten_obs(obs):
     if not isinstance(obs, dict):
         raise RuntimeError(f"Expected dict observation from FlattenRGBDObservationWrapper, got {type(obs).__name__}.")
-    if "rgb" not in obs or "joints" not in obs:
+    if "rgb" not in obs or "proprio" not in obs:
         raise RuntimeError(
             "Missing required keys in observation. "
             "Use StateOnlyTensorToDictWrapper + "

@@ -713,8 +713,8 @@ def _load_last_traj_actions(h5_path: Path) -> np.ndarray:
 def _validate_flatten_obs(obs: dict):
     if not isinstance(obs, dict):
         raise RuntimeError(f"Expected dict observation, got {type(obs).__name__}")
-    if "rgb" not in obs or "joints" not in obs:
-        raise RuntimeError("Expected observation keys 'rgb' and 'joints' from FlattenRGBDObservationWrapper")
+    if "rgb" not in obs or "proprio" not in obs:
+        raise RuntimeError("Expected observation keys 'rgb' and 'proprio' from FlattenRGBDObservationWrapper")
 
 
 def _is_batteries_env(env_id: str) -> bool:
@@ -748,7 +748,7 @@ def _rollout_pd_ee_episode(
     for action in actions:
         _validate_flatten_obs(obs)
         rgb_steps.append(_to_numpy(obs["rgb"])[0])
-        proprio_step = _to_numpy(obs["joints"])
+        proprio_step = _to_numpy(obs["proprio"])
         if proprio_step.ndim != 2 or proprio_step.shape[0] != 1 or proprio_step.shape[1] != 7:
             raise RuntimeError(
                 f"Expected proprio observation shape (1, 7) for eef xyz+rpy+gripper proprio, got {proprio_step.shape}."

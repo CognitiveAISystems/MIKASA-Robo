@@ -525,7 +525,7 @@ def collect_batched_data_from_ckpt(
         total_steps = 0
         for step_idx in range(episode_timeout):
             rgb_steps.append(_to_uint8_rgb_batch(obs_rgb["rgb"]))
-            proprio_np = obs_rgb["joints"].detach().cpu().numpy().astype(np.float32, copy=False)
+            proprio_np = obs_rgb["proprio"].detach().cpu().numpy().astype(np.float32, copy=False)
             if proprio_np.ndim != 2 or proprio_np.shape[0] != batch_size or proprio_np.shape[1] != 7:
                 raise RuntimeError(
                     "Expected proprio observation shape (batch_size, 7) for "

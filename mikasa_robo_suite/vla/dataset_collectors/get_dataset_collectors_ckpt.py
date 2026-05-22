@@ -760,7 +760,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
 
         if self.include_rgb or self.include_depth:
             ret["oracle_info"] = observation["oracle_info"]
-            ret["prompt"] = observation["prompt"]
+            ret["task_cue"] = observation["task_cue"]
             sensor_data = observation.pop("sensor_data")
 
             del observation["sensor_param"]
@@ -782,7 +782,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 observation = observation
         else:
             if not self.include_joints:
-                filtered_obs = {k: v for k, v in observation.items() if k not in ["prompt", "oracle_info"]}
+                filtered_obs = {k: v for k, v in observation.items() if k not in ["task_cue", "oracle_info"]}
             else:
                 # Create extra_agent dict with 'extra' and 'agent' keys
                 extra_agent = {}
@@ -794,7 +794,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
                 extra_agent_flat = common.flatten_state_dict(extra_agent, use_torch=True, device=self.base_env.device)
                 ret["joints"] = extra_agent_flat
 
-                filtered_obs = {k: v for k, v in observation.items() if k not in ["prompt", "oracle_info", "extra"]}
+                filtered_obs = {k: v for k, v in observation.items() if k not in ["task_cue", "oracle_info", "extra"]}
 
             observation = common.flatten_state_dict(filtered_obs, use_torch=True, device=self.base_env.device)
 
@@ -818,8 +818,8 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         if "oracle_info" in ret.keys() and (ret["oracle_info"] == 4242424242).any().item():
             ret.pop("oracle_info")
 
-        if "prompt" in ret.keys() and (ret["prompt"] == 4242424242).any().item():
-            ret.pop("prompt")
+        if "task_cue" in ret.keys() and (ret["task_cue"] == 4242424242).any().item():
+            ret.pop("task_cue")
 
         if "joints" in ret.keys() and not self.include_joints:
             ret.pop("joints")
@@ -1002,7 +1002,7 @@ class NatureCNN(nn.Module):
         self.out_features = 0
         feature_size = 256
 
-        self.list_of_obs_keys = list(sample_obs.keys())  # 'oracle_info', 'prompt', 'state', 'rgb'
+        self.list_of_obs_keys = list(sample_obs.keys())  # 'oracle_info', 'task_cue', 'state', 'rgb'
 
         if "rgb" in self.list_of_obs_keys:
             in_channels = sample_obs["rgb"].shape[-1]
@@ -1033,7 +1033,7 @@ class NatureCNN(nn.Module):
             self.out_features += feature_size
 
         for key in self.list_of_obs_keys:
-            if key in ["oracle_info", "prompt"]:
+            if key in ["oracle_info", "task_cue"]:
                 extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 64), nn.ReLU())
                 self.out_features += 64
             elif key == "joints":
@@ -1060,7 +1060,7 @@ class NatureCNN(nn.Module):
             if key == "rgb" and "rgb" in self.list_of_obs_keys:
                 obs = obs.float().permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
                 obs = obs / 255
-            elif key in ["oracle_info", "prompt", "joints"]:
+            elif key in ["oracle_info", "task_cue", "joints"]:
                 obs = obs.float()
 
             encoded_tensor_list.append(extractor(obs))
@@ -1150,17 +1150,17 @@ class AgentStateOnly(nn.Module):
 
         print(f"{envs.single_observation_space=}")
 
-    def add_prompt_to_state(self, x):
+    def add_task_cue_to_state(self, x):
         # Concatenate all observation tensors in order of self.list_of_obs_keys
         tensors = [x[key] for key in self.list_of_obs_keys]
         return torch.cat(tensors, dim=-1)
 
     def get_value(self, x):
-        x = self.add_prompt_to_state(x)
+        x = self.add_task_cue_to_state(x)
         return self.critic(x)
 
     def get_action(self, x, deterministic=False):
-        x = self.add_prompt_to_state(x)
+        x = self.add_task_cue_to_state(x)
         action_mean = self.actor_mean(x)
         if deterministic:
             return action_mean
@@ -1170,7 +1170,7 @@ class AgentStateOnly(nn.Module):
         return probs.sample()
 
     def get_action_and_value(self, x, action=None):
-        x = self.add_prompt_to_state(x)
+        x = self.add_task_cue_to_state(x)
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
@@ -1233,7 +1233,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = "cup_with_ball_number"
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in [
         "InterceptSlow-v0",
         "InterceptMedium-v0",
@@ -1249,7 +1249,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in [
         "RotateLenientPos-v0",
         "RotateLenientPosNeg-v0",
@@ -1264,7 +1264,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = "angle_diff"
-        prompt_info = "target_angle"
+        task_cue_info = "target_angle"
     elif args.env_id in ["CameraShutdownPush-v0", "CameraShutdownPick-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1273,7 +1273,7 @@ if __name__ == "__main__":
             (RenderRewardInfoWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["TakeItBack-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1282,7 +1282,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["RememberColor3-v0", "RememberColor5-v0", "RememberColor9-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1292,7 +1292,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["RememberShape3-v0", "RememberShape5-v0", "RememberShape9-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1302,7 +1302,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["RememberShapeAndColor3x2-v0", "RememberShapeAndColor3x3-v0", "RememberShapeAndColor5x3-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1312,7 +1312,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["BunchOfColors3-v0", "BunchOfColors5-v0", "BunchOfColors7-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1322,7 +1322,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["SeqOfColors3-v0", "SeqOfColors5-v0", "SeqOfColors7-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1332,7 +1332,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["ChainOfColors3-v0", "ChainOfColors5-v0", "ChainOfColors7-v0"]:
         wrappers_list = [
             (InitialZeroActionWrapper, {"n_initial_steps": args.noop_steps - 1}),
@@ -1342,7 +1342,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
 
     # ******* NEW *******
     elif args.env_id in ["RememberColor3-VLA-v0", "RememberColor5-VLA-v0", "RememberColor9-VLA-v0"]:
@@ -1354,7 +1354,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["RememberShape3-VLA-v0", "RememberShape5-VLA-v0", "RememberShape9-VLA-v0"]:
         wrappers_list = [
             (CurriculumPhaseNoopActionWrapper, {}),
@@ -1364,7 +1364,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in [
         "RememberShapeAndColor3x2-VLA-v0",
         "RememberShapeAndColor3x3-VLA-v0",
@@ -1378,7 +1378,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["ShellGameShuffleTouch-VLA-v0"]:
         wrappers_list = [
             (CurriculumPhaseNoopActionWrapper, {}),
@@ -1388,7 +1388,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = "cup_with_ball_number"
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["BlinkCountButtonPress-VLA-v0"]:
         wrappers_list = [
             (CurriculumPhaseNoopActionWrapper, {}),
@@ -1398,7 +1398,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = "target_blinks"
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["ShellGameTouch-VLA-v0", "ShellGamePick-VLA-v0", "ShellGamePush-VLA-v0"]:
         wrappers_list = [
             (CurriculumPhaseNoopActionWrapper, {}),
@@ -1408,7 +1408,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = "cup_with_ball_number"
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in ["ShellGameShuffleColorLampTouch-VLA-v0", "ShellGameColorLampTouch-VLA-v0"]:
         wrappers_list = [
             (CurriculumPhaseNoopActionWrapper, {}),
@@ -1418,7 +1418,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = "oracle_info"
-        prompt_info = "prompt"
+        task_cue_info = "task_cue"
     elif args.env_id in [
         "InterceptSlow-VLA-v0",
         "InterceptMedium-VLA-v0",
@@ -1433,7 +1433,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in [
         "RotateLenientPos-VLA-v0",
         "RotateLenientPosNeg-VLA-v0",
@@ -1447,7 +1447,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = "angle_diff"
-        prompt_info = "target_angle"
+        task_cue_info = "target_angle"
     elif args.env_id in ["TakeItBack-VLA-v0"]:
         wrappers_list = [
             (RenderStepInfoWrapper, {}),
@@ -1455,7 +1455,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     elif args.env_id in [
         "SeqOfColors3-VLA-v0",
         "SeqOfColors5-VLA-v0",
@@ -1475,7 +1475,7 @@ if __name__ == "__main__":
             (DebugRewardWrapper, {}),
         ]
         oracle_info = None
-        prompt_info = None
+        task_cue_info = None
     else:
         raise ValueError(f"Unknown environment: {args.env_id}")
 
@@ -1542,11 +1542,11 @@ if __name__ == "__main__":
     SAVE_DIR = f"oracle_checkpoints/ppo_memtasks/{MODE}/{args.reward_mode}/{args.env_id}"
 
     print(f"{MODE=}")
-    print(f"{prompt_info=}")
+    print(f"{task_cue_info=}")
 
     wrappers_list.insert(
         0, (StateOnlyTensorToDictWrapper, {})
-    )  # obs=torch.tensor -> dict with keys: state: obs, prompt: prompt, oracle_info: oracle_info
+    )  # obs=torch.tensor -> dict with keys: state: obs, task_cue: task_cue, oracle_info: oracle_info
 
     if args.exp_name is None:
         args.exp_name = os.path.basename(__file__)[: -len(".py")]

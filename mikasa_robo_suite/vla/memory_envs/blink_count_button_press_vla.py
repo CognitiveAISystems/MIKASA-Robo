@@ -295,7 +295,7 @@ class BlinkCountButtonPressVLABaseEnv(BaseEnv):
             self.table_scene.initialize(env_idx)
             env_idx = env_idx.to(self.device)
 
-            self.prompt = None
+            self.task_cue = None
             self.reward_dict = None
 
             button_xyz = torch.zeros((b, 3), device=self.device)
@@ -555,7 +555,7 @@ class BlinkCountButtonPressVLABaseEnv(BaseEnv):
             "xy_dist_to_confirm_button": confirm_xy_dist,
             "confirm_press_depth": self.confirm_button_press_depth,
             "obj_to_goal_pos": self.obj_to_goal_pos,
-            "prompt": self.prompt,
+            "task_cue": self.task_cue,
             "language_instruction": self.LANGUAGE_INSTRUCTION,
             "oracle_info": self.oracle_info,
             "reward_dict": self.reward_dict,
