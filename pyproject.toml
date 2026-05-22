@@ -48,7 +48,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/CognitiveAISystems/MIKASA-Robo"
-Documentation = "https://cognitiveaisystems.github.io/MIKASA-Robo/"
+Documentation = "https://mikasarobo.github.io/"
 "Bug Tracker" = "https://github.com/CognitiveAISystems/MIKASA-Robo/issues"
 
 [tool.setuptools.packages.find]

@@ -1,0 +1,58 @@
+name: Publish documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-docs.yml"
+      - "docs/**"
+      - "mikasa_robo_suite/**"
+      - "README.md"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Build and publish Sphinx docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r docs/requirements.txt
+          python -m pip install .
+
+      - name: Build documentation
+        run: |
+          sphinx-build -E -a -b html docs/source docs/_build/html
+          touch docs/_build/html/.nojekyll
+
+      - name: Check out Pages repository
+        uses: actions/checkout@v4
+        with:
+          repository: mikasarobo/mikasarobo.github.io
+          token: ${{ secrets.MIKASAROBO_PAGES_TOKEN }}
+          path: pages-site
+
+      - name: Update Pages repository
+        run: |
+          rsync -a --delete --exclude ".git/" docs/_build/html/ pages-site/
+          git -C pages-site config user.name "github-actions[bot]"
+          git -C pages-site config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C pages-site add -A
+          if git -C pages-site diff --cached --quiet; then
+            echo "Documentation output is unchanged."
+            exit 0
+          fi
+          git -C pages-site commit -m "Update MIKASA-Robo documentation"
+          git -C pages-site push

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cognitiveaisystems.github.io/MIKASA-Robo/">
+  <a href="https://mikasarobo.github.io/">
     <img src="https://img.shields.io/badge/📚_Documentation-MIKASA--Robo--VLA-0b7285?style=for-the-badge" alt="Documentation">
   </a>
   <a href="https://arxiv.org/abs/2502.10550">
@@ -51,7 +51,7 @@ The canonical VLA benchmark contains **90 tasks** with natural-language instruct
 
 > [!IMPORTANT]
 > **For the complete benchmark reference, go to the documentation website:**
-> ### 📚 [cognitiveaisystems.github.io/MIKASA-Robo](https://cognitiveaisystems.github.io/MIKASA-Robo/)
+> ### 📚 [mikasarobo.github.io](https://mikasarobo.github.io/)
 > It covers installation, all 90 tasks with descriptions, dataset format, API reference, training recipes, and usage examples.
 > This README contains only a minimal setup summary.
 
@@ -76,7 +76,7 @@ uv sync --frozen
 > git submodule update --init --recursive
 > ```
 
-See the [installation guide](https://cognitiveaisystems.github.io/MIKASA-Robo/installation.html) for system requirements, package-install alternatives, and setup troubleshooting.
+See the [installation guide](https://mikasarobo.github.io/installation.html) for system requirements, package-install alternatives, and setup troubleshooting.
 
 ## Quick Start
 
@@ -110,7 +110,7 @@ for _ in range(env.max_episode_steps):
 env.close()
 ```
 
-For task browsing, wrapper behavior, language instructions, and the observation/action contract, use the [quick start](https://cognitiveaisystems.github.io/MIKASA-Robo/quickstart.html), [environment catalogue](https://cognitiveaisystems.github.io/MIKASA-Robo/vla_environments/index.html), and [observation/action reference](https://cognitiveaisystems.github.io/MIKASA-Robo/observation_space.html).
+For task browsing, wrapper behavior, language instructions, and the observation/action contract, use the [quick start](https://mikasarobo.github.io/quickstart.html), [environment catalogue](https://mikasarobo.github.io/vla_environments/index.html), and [observation/action reference](https://mikasarobo.github.io/observation_space.html).
 
 ## Benchmarking
 
@@ -122,7 +122,7 @@ uv run python examples/eval_demo.py \
   --output-dir eval_results/dummy
 ```
 
-Canonical evaluation is organized by horizon split and uses the benchmark protocol for task selection, seeds, metrics, and result files. See [Benchmarking](https://cognitiveaisystems.github.io/MIKASA-Robo/benchmarking.html) and the [Evaluation Protocol](https://cognitiveaisystems.github.io/MIKASA-Robo/evaluation_protocol.html) before reporting results.
+Canonical evaluation is organized by horizon split and uses the benchmark protocol for task selection, seeds, metrics, and result files. See [Benchmarking](https://mikasarobo.github.io/benchmarking.html) and the [Evaluation Protocol](https://mikasarobo.github.io/evaluation_protocol.html) before reporting results.
 
 ## Datasets
 
@@ -150,16 +150,16 @@ LeRobot task directories use normalized lowercase dataset names, for example
 `RememberColor3-VLA-v0` is stored as `remember_color_3_vla_v0/`. The downloaded
 files are placed under `data_mikasa_robo/data_lerobot/remember_color_3_vla_v0/`.
 
-The [dataset guide](https://cognitiveaisystems.github.io/MIKASA-Robo/datasets.html) covers the public RLDS and LeRobot releases, local collection, dataset fields, and export workflows.
+The [dataset guide](https://mikasarobo.github.io/datasets.html) covers the public RLDS and LeRobot releases, local collection, dataset fields, and export workflows.
 
 ## Useful Links
 
-- [Documentation](https://cognitiveaisystems.github.io/MIKASA-Robo/)
-- [Installation](https://cognitiveaisystems.github.io/MIKASA-Robo/installation.html)
-- [Quick Start](https://cognitiveaisystems.github.io/MIKASA-Robo/quickstart.html)
-- [Environments and Tasks](https://cognitiveaisystems.github.io/MIKASA-Robo/vla_environments/index.html)
-- [Benchmarking](https://cognitiveaisystems.github.io/MIKASA-Robo/benchmarking.html)
-- [Datasets](https://cognitiveaisystems.github.io/MIKASA-Robo/datasets.html)
+- [Documentation](https://mikasarobo.github.io/)
+- [Installation](https://mikasarobo.github.io/installation.html)
+- [Quick Start](https://mikasarobo.github.io/quickstart.html)
+- [Environments and Tasks](https://mikasarobo.github.io/vla_environments/index.html)
+- [Benchmarking](https://mikasarobo.github.io/benchmarking.html)
+- [Datasets](https://mikasarobo.github.io/datasets.html)
 
 ## Citation
 
