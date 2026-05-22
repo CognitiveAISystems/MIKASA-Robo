@@ -5,9 +5,6 @@
 </p>
 
 <p align="center">
-  <a href="https://sites.google.com/view/memorybenchrobots/">
-    <img src="https://img.shields.io/badge/🌐_Project-Page-blue?style=for-the-badge" alt="Project Page">
-  </a>
   <a href="https://cognitiveaisystems.github.io/MIKASA-Robo/">
     <img src="https://img.shields.io/badge/📚_Documentation-MIKASA--Robo--VLA-0b7285?style=for-the-badge" alt="Documentation">
   </a>
@@ -22,27 +19,62 @@
   </a>
 </p>
 
+<table align="center">
+  <tr>
+    <td align="center"><img src="assets/ShellGameTouch-VLA-v0.gif" width="180"/><br><sub>Shell Game Touch</sub></td>
+    <td align="center"><img src="assets/ShellGameShuffleColorLampTouch-VLA-v0.gif" width="180"/><br><sub>Shell Game Shuffle Color Lamp Touch</sub></td>
+    <td align="center"><img src="assets/RememberColor3-VLA-v0.gif" width="180"/><br><sub>Remember Color</sub></td>
+    <td align="center"><img src="assets/RememberShapeAndColor3x2-VLA-v0.gif" width="180"/><br><sub>Remember Shape &amp; Color</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/FindImposterColor3-VLA-v0.gif" width="180"/><br><sub>Find Imposter Color</sub></td>
+    <td align="center"><img src="assets/InterceptFast-VLA-v0.gif" width="180"/><br><sub>Intercept</sub></td>
+    <td align="center"><img src="assets/RotateStrictPos-VLA-v0.gif" width="180"/><br><sub>Rotate Strict</sub></td>
+    <td align="center"><img src="assets/TakeItBack-VLA-v0.gif" width="180"/><br><sub>Take It Back</sub></td>
+  </tr>
+</table>
+
 ## What is MIKASA-Robo-VLA?
 
 MIKASA-Robo-VLA extends the MIKASA-Robo memory benchmark to language-conditioned Vision-Language-Action research. It provides tabletop robotic manipulation environments that require an agent to retain and use information across delayed, occluded, temporal, or multi-stage interactions.
 
 The canonical VLA benchmark contains **90 tasks** with natural-language instructions, ManiSkill/Gymnasium environments, and released trajectory datasets for training and evaluation. The benchmark task manifest is [`mikasa_robo_vla_envs.csv`](mikasa_robo_vla_envs.csv).
 
-> [!IMPORTANT]
-> The full documentation is available at [cognitiveaisystems.github.io/MIKASA-Robo](https://cognitiveaisystems.github.io/MIKASA-Robo/). This README keeps only the minimum setup, environment, benchmark, and dataset examples.
+### What changed from MIKASA-Robo (RL release)
 
-This README targets the VLA benchmark. The earlier RL-oriented MIKASA-Robo implementation remains available for legacy use; see the [documentation](https://cognitiveaisystems.github.io/MIKASA-Robo/) for compatibility notes.
+- **Task set grows from 32 → 90** registered environments covering **10 memory types** (vs 4 in the RL release).
+- **Every task ships a natural-language `LANGUAGE_INSTRUCTION`** for VLA conditioning.
+- **Episodes are grouped into three horizon splits** (Short / Medium / Long) so multi-task training and evaluation are tractable.
+- **22,500 PPO / motion-planning oracle trajectories** are released on Hugging Face in RLDS and LeRobotDataset v3 formats — no further conversion needed (6+ million transitions).
+- **Dense and normalised-dense rewards** are calibrated for every task, enabling both offline imitation learning and online RL.
+- The original 32-task RL implementation is available from the [`mikasa-robo-rl` branch](https://github.com/CognitiveAISystems/MIKASA-Robo/tree/mikasa-robo-rl) and remains under `mikasa_robo_suite/rl/` for backwards compatibility.
+
+> [!IMPORTANT]
+> **For the complete benchmark reference, go to the documentation website:**
+> ### 📚 [cognitiveaisystems.github.io/MIKASA-Robo](https://cognitiveaisystems.github.io/MIKASA-Robo/)
+> It covers installation, all 90 tasks with descriptions, dataset format, API reference, training recipes, and usage examples.
+> This README contains only a minimal setup summary.
+
+> [!NOTE]
+> Looking for the original RL-oriented **MIKASA-Robo**?
+> - **Git:** [`mikasa-robo-rl` branch](https://github.com/CognitiveAISystems/MIKASA-Robo/tree/mikasa-robo-rl)
+> - **PyPI:** `pip install mikasa-robo-suite==0.0.5`
 
 ## Installation
 
 Install from the repository with the locked `uv` environment:
 
 ```bash
-git clone git@github.com:CognitiveAISystems/MIKASA-Robo.git
+git clone https://github.com/CognitiveAISystems/MIKASA-Robo.git
 cd MIKASA-Robo
-git submodule update --init --recursive
 uv sync --frozen
 ```
+
+> [!TIP]
+> The submodule (`utils/convert_npz_to_rlds/`) is only needed if you plan to **collect your own trajectory datasets** (`.npz`) and then **convert them to RLDS format**. For benchmarking, evaluation, or training on the released datasets, you can skip it. To initialize it when needed:
+> ```bash
+> git submodule update --init --recursive
+> ```
 
 See the [installation guide](https://cognitiveaisystems.github.io/MIKASA-Robo/installation.html) for system requirements, package-install alternatives, and setup troubleshooting.
 
@@ -108,10 +140,15 @@ from huggingface_hub import snapshot_download
 snapshot_download(
     repo_id="mikasa-robo/mikasa-robo-vla-lerobot",
     repo_type="dataset",
-    allow_patterns="RememberColor3-VLA-v0/**",
+    allow_patterns="remember_color_3_vla_v0/**",
     local_dir="data_mikasa_robo/data_lerobot",
 )
 ```
+
+`allow_patterns` matches paths inside the Hugging Face dataset repository.
+LeRobot task directories use normalized lowercase dataset names, for example
+`RememberColor3-VLA-v0` is stored as `remember_color_3_vla_v0/`. The downloaded
+files are placed under `data_mikasa_robo/data_lerobot/remember_color_3_vla_v0/`.
 
 The [dataset guide](https://cognitiveaisystems.github.io/MIKASA-Robo/datasets.html) covers the public RLDS and LeRobot releases, local collection, dataset fields, and export workflows.
 

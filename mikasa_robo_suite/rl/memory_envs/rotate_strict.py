@@ -209,7 +209,7 @@ class RotateStrictEnv(BaseEnv):
         reach_threshold = 0.04
         reached_status = to_grip_dist < reach_threshold
 
-        # Base reward - только награда за приближение к peg
+        # Base reward - approach-to-peg reward only
         reward = 0.5 * reaching_reward
 
         # Position control rewards

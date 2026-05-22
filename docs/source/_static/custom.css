@@ -146,9 +146,7 @@ table.wide-table {
 .task-overview-preview {
   width: 180px;
   max-width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  object-position: center center;
+  height: auto;
   border-radius: 6px;
   border: 1px solid var(--pst-color-border);
   background: #111827;

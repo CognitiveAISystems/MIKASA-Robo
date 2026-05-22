@@ -5,17 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mikasa-robo-suite"
 version = "1.0.0"
-description = "Gym-like memory-intensive environments for robotic tabletop manipulation"
+description = "Memory-intensive robotic manipulation benchmark for Vision-Language-Action research"
 readme = "README.md"
 requires-python = ">=3.9,<3.12"
 license = { file = "LICENSE" }
 authors = [
   { name = "Egor Cherepanov", email = "cherepanovegor2018@gmail.com" },
 ]
+keywords = [
+  "robotics", "reinforcement-learning", "vision-language-action", "benchmark",
+  "memory", "manipulation", "maniskill", "gymnasium",
+]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Intended Audience :: Science/Research",
 ]
 dependencies = [
   "setuptools>=69,<81",
@@ -37,12 +43,13 @@ dependencies = [
   "huggingface-hub[cli]>=0.23,<1.0",
   "ipykernel>=7.0.0a2",
   "seaborn>=0.13.2",
-  "ruff>=0.15.8",
   "rich>=13.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/CognitiveAISystems/MIKASA-Robo"
+Documentation = "https://cognitiveaisystems.github.io/MIKASA-Robo/"
+"Bug Tracker" = "https://github.com/CognitiveAISystems/MIKASA-Robo/issues"
 
 [tool.setuptools.packages.find]
 include = ["mikasa_robo_suite*", "baselines*"]

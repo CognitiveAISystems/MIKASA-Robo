@@ -68,8 +68,9 @@ Legacy RL Version
 
 The default repository is moving to the VLA benchmark.  The ``pip`` command
 below installs only the original RL benchmark release from PyPI; it does **not**
-include the VLA environments or this documentation.  Use the ``mikasa-robo-rl``
-branch or:
+include the VLA environments or this documentation.  Use the
+`mikasa-robo-rl branch <https://github.com/CognitiveAISystems/MIKASA-Robo/tree/mikasa-robo-rl>`_
+or:
 
 .. code-block:: bash
 

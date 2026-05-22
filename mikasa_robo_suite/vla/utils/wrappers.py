@@ -105,15 +105,14 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
         if self.qpos_dim is None:
             self.qpos_dim = self._infer_qpos_dim_from_env()
 
-        if isinstance(self.observation_space, spaces.Dict) and "joints" in self.observation_space.spaces:
+        if isinstance(self.observation_space, spaces.Dict) and "proprio" in self.observation_space.spaces:
             new_spaces = dict(self.observation_space.spaces)
-            joints_space = new_spaces["joints"]
-            if isinstance(joints_space, spaces.Box):
-                shape = tuple(joints_space.shape)
+            proprio_space = new_spaces["proprio"]
+            if isinstance(proprio_space, spaces.Box):
+                shape = tuple(proprio_space.shape)
                 new_shape = (7,) if len(shape) == 0 else (*shape[:-1], 7)
                 low = np.full(new_shape, -np.inf, dtype=np.float32)
                 high = np.full(new_shape, np.inf, dtype=np.float32)
-                new_spaces.pop("joints")
                 new_spaces["proprio"] = spaces.Box(low=low, high=high, dtype=np.float32)
                 self.observation_space = spaces.Dict(new_spaces)
 
@@ -192,11 +191,11 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
         return int(max(1, joints_dim - 7))
 
     def observation(self, obs):
-        if not isinstance(obs, dict) or "joints" not in obs:
+        if not isinstance(obs, dict) or "proprio" not in obs:
             return obs
 
         out = obs.copy()
-        joints = out["joints"]
+        joints = out["proprio"]
         is_torch = torch.is_tensor(joints)
 
         if is_torch:
@@ -206,7 +205,6 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
 
         if arr.shape[-1] == 7:
             out["proprio"] = arr
-            out.pop("joints", None)
             return out
 
         original_shape = tuple(arr.shape)
@@ -251,7 +249,6 @@ class ConvertJointsToEEFXyzRpyGripperWrapper(gym.ObservationWrapper):
             out["proprio"] = proprio[0]
         else:
             out["proprio"] = proprio.reshape(*original_shape[:-1], 7)
-        out.pop("joints", None)
         return out
 
 
@@ -990,6 +987,9 @@ class DebugRewardWrapper(gym.Wrapper):
         frame = np.ascontiguousarray(frame)
         if frame.dtype != np.uint8:
             frame = np.clip(frame, 0, 255).astype(np.uint8, copy=False)
+
+        if os.environ.get("MIKASA_DISABLE_REWARD_OVERLAY", "0") == "1":
+            return frame
 
         for i in range(len(frame)):
             if "reward_dict" in self.info and self.info["reward_dict"] is not None:

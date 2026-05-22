@@ -259,7 +259,7 @@ def main():
     max_env_steps = int(env_spec.max_episode_steps)
 
     wrappers_list = [
-        (CurriculumPhaseNoopActionWrapper, {}),
+        (CurriculumPhaseNoopActionWrapperPdJointPos, {}),
         (RenderTraceShapeDebugWrapper, {}),
     ]
     if bool(args.overlay_info):

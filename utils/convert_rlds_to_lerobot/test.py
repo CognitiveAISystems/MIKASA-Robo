@@ -7,14 +7,14 @@ import numpy as np
 import pandas as pd
 import torch
 
-# Если в вашей среде бывают проблемы с HF cache lock:
+# If you experience HF cache lock issues in your environment:
 os.environ.setdefault("HF_HOME", "/tmp/hf-home")
 
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
 ROOT = Path("data_mikasa_robo/data_lerobot/RememberColor3-VLA-v0")
 REPO_ID = "RememberColor3-VLA-v0"
-EPISODE_ID = 0  # поменяйте на нужный
+EPISODE_ID = 0  # change to the desired episode index
 OUTPUT_DIR = Path(tempfile.mkdtemp(prefix="rlds_to_lerobot_preview_"))
 
 
@@ -59,7 +59,7 @@ if "observation.images.wrist" not in ds.features:
 
 print(f"primary_cam_key    : {primary_cam_key}")
 
-# Получаем глобальные индексы кадров выбранного эпизода
+# Get global frame indices for the selected episode
 ep_arr = np.array([int(x) for x in ds.hf_dataset["episode_index"]], dtype=np.int64)
 idxs = np.where(ep_arr == EPISODE_ID)[0]
 if len(idxs) == 0:
@@ -80,7 +80,7 @@ def chw_to_hwc01(x):
     return x
 
 
-# Покажем начало/середину/конец эпизода
+# Sample beginning / middle / end of the episode
 sample_global_idxs = [idxs[0], idxs[len(idxs) // 2], idxs[-1]]
 
 fig, axes = plt.subplots(2, 3, figsize=(12, 7))

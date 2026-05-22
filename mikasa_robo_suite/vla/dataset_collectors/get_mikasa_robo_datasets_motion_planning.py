@@ -871,7 +871,7 @@ def _validate_removed_conversion_args(args):
         opts = ", ".join(failed)
         raise ValueError(
             "Deprecated conversion options are no longer supported in motion-planning collector: "
-            f"{opts}. удалено, используется ManiSkill replay."
+            f"{opts}. These options have been removed; ManiSkill replay is used instead."
         )
 
 

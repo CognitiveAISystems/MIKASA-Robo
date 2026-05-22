@@ -117,7 +117,7 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
 
                 # Flatten the extra_agent dict
                 extra_agent_flat = common.flatten_state_dict(extra_agent, use_torch=True, device=self.base_env.device)
-                ret["joints"] = extra_agent_flat
+                ret["proprio"] = extra_agent_flat
 
                 filtered_obs = {k: v for k, v in observation.items() if k not in ["task_cue", "oracle_info", "extra"]}
 
@@ -146,8 +146,8 @@ class FlattenRGBDObservationWrapper(gym.ObservationWrapper):
         if "task_cue" in ret.keys() and (ret["task_cue"] == 4242424242).any().item():
             ret.pop("task_cue")
 
-        if "joints" in ret.keys() and not self.include_joints:
-            ret.pop("joints")
+        if "proprio" in ret.keys() and not self.include_joints:
+            ret.pop("proprio")
 
         return ret
 
@@ -368,7 +368,7 @@ class NatureCNN(nn.Module):
             if key in ["oracle_info", "task_cue"]:
                 extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 64), nn.ReLU())
                 self.out_features += 64
-            elif key == "joints":
+            elif key == "proprio":
                 extractors[key] = nn.Sequential(nn.Linear(sample_obs[key].shape[-1], 256), nn.ReLU())
                 self.out_features += 256
 
@@ -392,7 +392,7 @@ class NatureCNN(nn.Module):
             if key == "rgb" and "rgb" in self.list_of_obs_keys:
                 obs = obs.float().permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
                 obs = obs / 255.0
-            elif key in ["oracle_info", "task_cue", "joints"]:
+            elif key in ["oracle_info", "task_cue", "proprio"]:
                 obs = obs.float()
 
             encoded_tensor_list.append(extractor(obs))

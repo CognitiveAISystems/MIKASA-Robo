@@ -125,6 +125,18 @@ wrapper recommendations, render previews, and collection commands.
 Task Overview
 -------------
 
+.. raw:: html
+
+   <div style="text-align:center;margin-bottom:6px;font-size:1.1em;color:#666;animation:scroll-hint 1.2s ease-in-out infinite alternate">
+     ← scroll →
+   </div>
+   <style>
+     @keyframes scroll-hint {
+       from { opacity: 0.25; letter-spacing: 0.05em; }
+       to   { opacity: 1;    letter-spacing: 0.25em; }
+     }
+   </style>
+
 .. list-table::
    :header-rows: 1
    :widths: 11 10 11 10 10 10 9 8 19

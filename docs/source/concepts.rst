@@ -41,7 +41,9 @@ The benchmark extends the original **MIKASA-Robo** RL release
 
 .. important::
 
-   The RL implementation lives under ``mikasa_robo_suite/rl/`` and is kept for
+   The earlier RL benchmark is available from the
+   `mikasa-robo-rl branch <https://github.com/CognitiveAISystems/MIKASA-Robo/tree/mikasa-robo-rl>`_.
+   Its implementation lives under ``mikasa_robo_suite/rl/`` and is kept for
    backwards compatibility.  All active development and new environments target
    ``mikasa_robo_suite/vla/``.
 
