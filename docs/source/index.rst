@@ -170,7 +170,7 @@ Legacy RL Version
 
    If you need the original RL benchmark from the MIKASA-Robo paper
    (`arXiv:2502.10550 <https://arxiv.org/abs/2502.10550>`_), install
-   ``mikasa-robo-suite==0.0.5`` from PyPI or use the ``main_backup`` branch.
+   ``mikasa-robo-suite==0.0.5`` from PyPI or use the ``mikasa-robo-rl`` branch.
    New development targets MIKASA-Robo-VLA.  The previous 32-environment RL
    implementation is still kept under ``mikasa_robo_suite/rl/`` for
    compatibility.

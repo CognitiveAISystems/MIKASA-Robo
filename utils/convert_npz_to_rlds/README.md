@@ -1,87 +1,104 @@
-# Instruction by MIKASA-Robo authors
+# NPZ to RLDS Converter
 
-### Изолированный запуск из корня репозитория (рекомендуется)
+This utility converts locally collected MIKASA-Robo-VLA NPZ episodes into an
+episodic RLDS / TFDS dataset. It is the first export step in the local dataset
+pipeline:
+
+```text
+data_mikasa_robo/data_npz/<task>/  ->  data_mikasa_robo/data_rlds/<task>/1.0.0/
+```
+
+Use it after collecting NPZ episodes with the MIKASA-Robo-VLA dataset
+collectors. The downstream LeRobot export consumes the RLDS output produced
+here.
+
+## Input and output
+
+The converter accepts either a Gymnasium env ID or the normalized dataset
+folder name:
+
+```text
+RememberColor3-VLA-v0
+remember_color_3_vla_v0
+```
+
+For a task named `remember_color_3_vla_v0`, the expected input layout is:
+
+```text
+data_mikasa_robo/
+  data_npz/
+    remember_color_3_vla_v0/
+      train_data_000000.npz
+      train_data_000001.npz
+      ...
+      metadata.json
+```
+
+Each NPZ episode is expected to contain the canonical VLA fields used by the
+RLDS builder, including `rgb`, `proprio`, `action`, `reward`, `success`,
+`done`, and `language_instruction`.
+
+The output layout is:
+
+```text
+data_mikasa_robo/
+  data_rlds/
+    remember_color_3_vla_v0/
+      1.0.0/
+        dataset_info.json
+        features.json
+        metadata.json
+        mikasa_dataset-train.tfrecord-*
+        ...
+```
+
+`metadata.json` is copied from the source NPZ task directory into the final
+RLDS version directory.
+
+## Environment setup
+
+Run this converter from the MIKASA-Robo repository root with its isolated
+TFDS builder project:
 
 ```bash
-# cd to repo root
-cd /home/jovyan/echerepanov/REPOSITORIES/mikasa_vla/MIKASA-Robo
-
-# 1) один раз создать/обновить отдельное окружение конвертера
 uv sync --project utils/convert_npz_to_rlds/rlds_dataset_builder
+```
 
-# 2) запуск конвертации в изолированном окружении rlds_dataset_builder
+The builder project pins a Python 3.9 TensorFlow / TFDS environment. Keep the
+`--project utils/convert_npz_to_rlds/rlds_dataset_builder` flag on converter
+commands so the root project environment is not used accidentally.
+
+## Convert one task
+
+```bash
 uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
   python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-  --task RememberShape3-VLA-v0 \
+  --task RememberColor3-VLA-v0 \
   --overwrite-dest
 ```
 
-Проверка, что используется именно специальное окружение `rlds_dataset_builder`:
+By default the script:
+
+1. Normalizes `--task` to the dataset folder name.
+2. Sets the TFDS builder context for that task.
+3. Runs `tfds build --overwrite` with the converter interpreter.
+4. Copies the generated RLDS `1.0.0` directory into
+   `data_mikasa_robo/data_rlds/<task>/`.
+5. Copies the NPZ task `metadata.json` into the RLDS output.
+
+If the destination task directory already exists, pass `--overwrite-dest` to
+replace it.
+
+## Convert multiple tasks
+
+Convert every NPZ task folder currently available:
+
 ```bash
-uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-  python -c "import sys; print(sys.executable)"
-# ожидаемый путь:
-# .../utils/convert_npz_to_rlds/rlds_dataset_builder/.venv/bin/python
-```
-
-Важно:
-1. Не запускай из корня `uv run python ...` без `--project`, иначе возьмется корневой проект.
-2. Команды с `--project utils/convert_npz_to_rlds/rlds_dataset_builder` используют отдельное окружение конвертера и не ломают корневое `uv`-окружение.
-
-### Конвертация данных (автоматически для любой задачи)
-```bash
-# cd to repo root
-
-# Пример для одной задачи:
-uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-  python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-  --task RememberShape3-VLA-v0 \
-  --overwrite-dest
-```
-
-Важно про параллельный запуск:
-1. Теперь каждый запуск конвертера по умолчанию использует отдельный временный `TFDS data_dir`, поэтому несколько `npz -> rlds` процессов можно запускать параллельно без конфликта за `~/tensorflow_datasets/mikasa_dataset/1.0.0`.
-2. Если нужен фиксированный каталог TFDS (например для дебага), укажи его явно:
-```bash
-uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-  python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-  --task RememberShape3-VLA-v0 \
-  --overwrite-dest \
-  --tfds-data-dir /tmp/tfds_debug_remember_shape3
-```
-
-Что делает скрипт:
-1. Передает имя задачи в `mikasa_dataset_dataset_builder.py` через `MIKASA_TASK_NAME`.
-2. Запускает `tfds build --overwrite`.
-3. Копирует только финальную версию `1.0.0` в `data_mikasa_robo/data_rlds/<task>/`.
-4. Копирует исходный `metadata.json` в `data_mikasa_robo/data_rlds/<task>/1.0.0/metadata.json`.
-
-Очистка старых артефактов от предыдущих конфликтов:
-```bash
-find data_mikasa_robo/data_rlds -type d -name '1.0.0.incomplete*' -print -exec rm -rf {} +
-```
-
-### Конвертация нескольких задач подряд
-```bash
-cd /home/jovyan/echerepanov/REPOSITORIES/mikasa_vla/MIKASA-Robo
-
-for task in RememberColor3-VLA-v0 BatteriesCheckerEasy-3-VLA-v0; do
-  uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-    python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-    --task "${task}" \
-    --overwrite-dest
-done
-```
-
-### Конвертация всех директорий из `data_mikasa_robo/data_npz`
-```bash
-cd /home/jovyan/echerepanov/REPOSITORIES/mikasa_vla/MIKASA-Robo
-
 for task_dir in data_mikasa_robo/data_npz/*; do
   [ -d "${task_dir}" ] || continue
   task="$(basename "${task_dir}")"
   [[ "${task}" == _* ]] && continue
-  echo "Converting: ${task}"
+
   uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
     python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
     --task "${task}" \
@@ -89,60 +106,60 @@ for task_dir in data_mikasa_robo/data_npz/*; do
 done
 ```
 
-### Инкрементальная конвертация (только недоконвертированные задачи)
+The converter uses a separate temporary TFDS data directory per run by
+default, so independent task conversions can run in parallel without sharing
+the usual global TFDS output directory.
+
+## Useful options
+
+| Option | Purpose |
+|---|---|
+| `--task TASK` | Source task env ID or normalized dataset folder name. Required. |
+| `--repo-root PATH` | Override repository root auto-detection. |
+| `--npz-root PATH` | Source NPZ root relative to the repo root. Default: `data_mikasa_robo/data_npz`. |
+| `--rlds-root PATH` | Destination RLDS root relative to the repo root. Default: `data_mikasa_robo/data_rlds`. |
+| `--builder-dir PATH` | Override the TFDS builder directory. Default: `utils/convert_npz_to_rlds/rlds_dataset_builder/rlds_dataset_builder/mikasa_dataset`. |
+| `--dataset-name NAME` | Override the TFDS dataset name used for the build. Default: `mikasa_dataset`. |
+| `--tfds-data-dir PATH` | Use a persistent TFDS build directory instead of a per-run temporary directory. |
+| `--overwrite-dest` | Replace an existing RLDS task destination. |
+
+For a reproducible debug build directory:
+
 ```bash
-cd /home/jovyan/echerepanov/REPOSITORIES/mikasa_vla/MIKASA-Robo
-set -euo pipefail
-
-NPZ_ROOT="data_mikasa_robo/data_npz"
-RLDS_ROOT="data_mikasa_robo/data_rlds"
-
-for task_dir in "${NPZ_ROOT}"/*; do
-  [ -d "${task_dir}" ] || continue
-  task="$(basename "${task_dir}")"
-  [[ "${task}" == _* ]] && continue
-
-  out="${RLDS_ROOT}/${task}/1.0.0"
-
-  # Если RLDS полностью собран, пропускаем.
-  if [[ -f "${out}/metadata.json" \
-     && -f "${out}/dataset_info.json" \
-     && -f "${out}/features.json" ]] \
-     && compgen -G "${out}/mikasa_dataset-train.tfrecord-*" > /dev/null; then
-    # echo "[SKIP] ${task} (already converted)"
-    continue
-  fi
-
-  # Если выхода нет или он неполный — пересобираем только эту задачу.
-  echo "[CONVERT] ${task}"
-  # uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-  #   python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-  #     --task "${task}" \
-  #     --overwrite-dest
-done
+uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
+  python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
+  --task RememberColor3-VLA-v0 \
+  --tfds-data-dir /tmp/mikasa_tfds_debug \
+  --overwrite-dest
 ```
 
-for task in BunchOfColors3-Long-VLA-v0 BunchOfColors3-VLA-v0 BunchOfColors5-Long-VLA-v0 BunchOfColors5-VLA-v0 BunchOfColors7-Long-VLA-v0 BunchOfColors7-VLA-v0 ChainOfColors3-Long-VLA-v0 ChainOfColors3-VLA-v0; do uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-    python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-    --task "${task}" \
-    --overwrite-dest
-done
+## Verification
 
+After conversion, check the RLDS version directory:
 
-for task in ChainOfColors5-Long-VLA-v0 ChainOfColors5-VLA-v0 ChainOfColors7-VLA-v0 RememberColor3-Long-VLA-v0 RememberColor5-Long-VLA-v0 RememberColor9-Long-VLA-v0; do CUDA_VISIBLE_DEVICES=1 uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-    python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-    --task "${task}" \
-    --overwrite-dest
-done
+```bash
+task=remember_color_3_vla_v0
+out="data_mikasa_robo/data_rlds/${task}/1.0.0"
 
-for task in RememberShape3-Long-VLA-v0 RememberShape5-Long-VLA-v0 RememberShape9-Long-VLA-v0 RememberShapeAndColor3x2-Long-VLA-v0 RememberShapeAndColor3x3-Long-VLA-v0 RememberShapeAndColor5x3-Long-VLA-v0 SeqOfColors3-Long-VLA-v0; do CUDA_VISIBLE_DEVICES=2 uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-    python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-    --task "${task}" \
-    --overwrite-dest
-done
+test -f "${out}/dataset_info.json"
+test -f "${out}/features.json"
+test -f "${out}/metadata.json"
+compgen -G "${out}/mikasa_dataset-train.tfrecord-*" > /dev/null
+echo "OK: ${task}"
+```
 
-for task in SeqOfColors3-VLA-v0 SeqOfColors5-Long-VLA-v0 SeqOfColors5-VLA-v0 SeqOfColors7-VLA-v0 ShellGameShuffleColorLampTouch-Long-VLA-v0 ShellGameShuffleTouch-Long-VLA-v0; do CUDA_VISIBLE_DEVICES=2 uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
-    python utils/convert_npz_to_rlds/convert_npz_task_to_rlds.py \
-    --task "${task}" \
-    --overwrite-dest
-done
+You can also confirm that `uv` is using the builder environment:
+
+```bash
+uv run --project utils/convert_npz_to_rlds/rlds_dataset_builder \
+  python -c "import sys; print(sys.executable)"
+```
+
+## Notes
+
+- The RLDS builder stores each episode as a `steps` sequence with top and wrist
+  RGB images, 7D proprioception, 7D `pd_ee_delta_pose` actions, rewards, step
+  markers, and `language_instruction`.
+- Only the `train` split is generated by the current builder.
+- Dataset semantics and the complete export pipeline are documented in
+  `docs/source/datasets.rst`.

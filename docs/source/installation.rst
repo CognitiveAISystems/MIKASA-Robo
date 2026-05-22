@@ -68,7 +68,7 @@ Legacy RL Version
 
 The default repository is moving to the VLA benchmark.  The ``pip`` command
 below installs only the original RL benchmark release from PyPI; it does **not**
-include the VLA environments or this documentation.  Use the ``main_backup``
+include the VLA environments or this documentation.  Use the ``mikasa-robo-rl``
 branch or:
 
 .. code-block:: bash

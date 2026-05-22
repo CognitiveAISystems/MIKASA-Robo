@@ -86,7 +86,7 @@ Run the reference checkpoint-free dummy policy first to smoke-test the evaluatio
 
 ```bash
 uv run python examples/eval_demo.py \
-  --num-episodes 1 --sim-backend cpu \
+  --num-episodes 1 --sim-backend gpu \
   --output-dir eval_results/dummy
 ```
 
