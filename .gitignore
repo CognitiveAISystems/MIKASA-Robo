@@ -4,6 +4,8 @@
 *.wmv
 
 videos/
+!docs/source/_static/videos/
+!docs/source/_static/videos/**
 
 *.py[cod]
 __pycache__/
