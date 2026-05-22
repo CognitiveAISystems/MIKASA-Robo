@@ -55,6 +55,7 @@ html_theme_options = {
             "icon": "fa-brands fa-github",
         },
     ],
+    "footer_end": ["footer-counter"],
 }
 
 html_title = "MIKASA-Robo-VLA Documentation"
